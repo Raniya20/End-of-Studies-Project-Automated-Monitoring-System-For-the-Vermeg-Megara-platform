@@ -1,0 +1,44 @@
+{# app/templates/scenarios/start_recording_guidance.html (Simplified) #}
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ title }} for Scenario: {{ scenario.name }}</h1>
+
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Next Steps: Record Automation Sequence</h5>
+            <p>Please follow these instructions to record the interaction steps for this scenario:</p>
+            <ol>
+                <li>
+                    Open the target application in a new browser tab:
+                    <a href="{{ scenario.megara_url }}" target="_blank" class="btn btn-outline-primary btn-sm ms-2">
+                        Open {{ scenario.name }} Application <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </li>
+                <li>Once the application page is fully loaded, click the <b>Megara Recorder</b> icon <img src="{{ url_for('static', filename='icons/icon48.png') }}" alt="Ext Icon" style="width:16px; height:16px; vertical-align:middle;"> in your browser's toolbar.</li>
+                <li>In the extension popup:
+                    <ul>
+                        <li>If not already logged in, log in using the popup form.</li>
+                        <li>Select the scenario <b>{{ scenario.name }}</b> from the dropdown list.</li>
+                        <li>Click the <strong>Start Recording</strong> button.</li>
+                    </ul>
+                </li>
+                <li>Interact with the application as you normally would for monitoring. Click on elements to define actions.</li>
+                <li>When finished, click <strong>Stop Recording</strong> in the extension popup.</li>
+            </ol>
+            <hr>
+            <p class="mt-3">After you have finished recording all steps, you can manage them here:</p>
+            <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-info">
+                View Scenario Details & Recorded Steps
+            </a>
+             <a href="{{ url_for('scenarios.list_scenarios') }}" class="btn btn-outline-secondary ms-2">
+                Back to Scenarios List
+            </a>
+        </div>
+    </div>
+    {# No longer need the hidden div or special JS for this page #}
+{% endblock %}
+
+{# Remove the specific scripts block if it only contained the chrome.storage.local logic #}
+{% block scripts %}{{ super() }}{% endblock %}

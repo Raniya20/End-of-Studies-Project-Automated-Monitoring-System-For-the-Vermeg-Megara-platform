@@ -1,0 +1,222 @@
+/* popup/popup.css */
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+    --border-color: #dee2e6;
+    --body-bg: #fff;
+    --body-color: #212529;
+    --link-color: #0d6efd;
+    --font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --border-radius: 0.375rem;
+    --box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --box-shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+body {
+    font-family: var(--font-family-sans-serif);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--body-color);
+    background-color: var(--body-bg);
+    margin: 0; /* Remove default body margin */
+    width: 280px; /* Slightly wider popup */
+}
+
+.container {
+    padding: 15px;
+}
+
+.popup-header {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between icon and title */
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.popup-header img {
+    flex-shrink: 0; /* Prevent icon from shrinking */
+}
+.popup-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.popup-section {
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.875em;
+    font-weight: 500;
+    color: #495057;
+}
+
+.form-control {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--body-color);
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    appearance: none;
+    border-radius: var(--border-radius);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    color: var(--body-color);
+    background-color: #fff;
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+select.form-control {
+     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+     background-repeat: no-repeat;
+     background-position: right 0.75rem center;
+     background-size: 16px 12px;
+     padding-right: 2.25rem;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: 1rem 0;
+}
+
+.user-info {
+    font-size: 0.9em;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--body-color); /* Default text color */
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9rem;
+    border-radius: var(--border-radius);
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    width: 100%; /* Make buttons full width by default */
+    margin-bottom: 5px; /* Space between buttons */
+}
+.btn:last-child {
+     margin-bottom: 0;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-primary:hover {
+    color: #fff;
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.btn-success {
+    color: #fff;
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+.btn-success:hover {
+    color: #fff;
+    background-color: #157347;
+    border-color: #146c43;
+}
+
+.btn-danger {
+    color: #fff;
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+.btn-danger:hover {
+    color: #fff;
+    background-color: #bb2d3b;
+    border-color: #b02a37;
+}
+
+/* Link button for logout */
+.btn-link {
+    font-weight: 400;
+    color: var(--link-color);
+    text-decoration: underline;
+    background-color: transparent;
+    border: none;
+    padding: 0; /* Remove padding */
+    width: auto; /* Override full width */
+    margin-bottom: 0;
+}
+.btn-link:hover {
+    color: #0a58ca;
+}
+.btn-logout {
+    font-size: 0.9em; /* Make logout slightly smaller */
+}
+
+
+/* Status Bar */
+.status-bar {
+    font-size: 0.85em;
+    text-align: center;
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: var(--border-radius);
+    border: 1px solid transparent;
+}
+.status-idle { background-color: var(--light-color); border-color: #eee; color: #555;}
+.status-recording { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;} /* Use danger colors */
+.status-error { background-color: #fff3cd; border-color: #ffeeba; color: #664d03;} /* Use warning colors */
+.status-success { background-color: #d1e7dd; border-color: #badbcc; color: #0f5132;} /* Use success colors */
+
+/* Alert for login errors */
+.alert {
+    position: relative;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--border-radius);
+    font-size: 0.9em;
+}
+.alert-error {
+    color: #842029;
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+}
+
+/* Utility */
+.hidden { display: none !important; }

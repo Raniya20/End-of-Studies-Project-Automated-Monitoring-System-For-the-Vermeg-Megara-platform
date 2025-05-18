@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Megara Recorder</title>
+    <link rel="stylesheet" href="popup.css"> <!-- Link external CSS -->
+</head>
+<body>
+    <div class="container">
+        <header class="popup-header">
+            <img src="../icons/icon48.png" alt="Logo" width="24" height="24"> <!-- Add icon -->
+            <h3>Megara Recorder</h3>
+        </header>
+
+        
+        <section id="loginSection" class="popup-section">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" class="form-control">
+            </div>
+             <div id="loginError" class="alert alert-error hidden"></div>
+            <button id="loginButton" class="btn btn-primary">Login</button>
+        </section>
+        
+
+        
+        <section id="loggedInSection" class="popup-section hidden">
+            <div id="userInfo" class="user-info">
+                 Logged in as: <strong id="loggedInUser"></strong>
+                 <button id="logoutButton" class="btn btn-link btn-logout">Logout</button>
+            </div>
+            <hr id="separator" class="hidden">
+            <div class="form-group">
+                <label for="scenarioSelect">Record to Scenario:</label>
+                <select id="scenarioSelect" class="form-control">
+                    <option value="">-- Loading Scenarios --</option>
+                </select>
+            </div>
+            <div id="controls">
+                <button id="startRecord" class="btn btn-success">Start Recording</button>
+                <button id="stopRecord" class="btn btn-danger">Stop Recording</button>
+            </div>
+        </section>
+        
+
+        <footer id="status" class="status-bar status-idle">Status: Initializing...</footer>
+    </div> 
+    <script src="popup.js"></script>
+</body>
+</html>

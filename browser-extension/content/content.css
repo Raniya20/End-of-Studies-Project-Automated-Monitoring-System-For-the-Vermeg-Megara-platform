@@ -1,0 +1,199 @@
+/* content/content.css */
+
+/* --- Highlight Style (Keep as is or adjust color if desired) --- */
+._megara-recorder-highlight {
+    outline: 2px solid #dc3545 !important; /* Use a distinct color like Bootstrap's danger red */
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.4) !important; /* Softer glow effect */
+    cursor: crosshair !important;
+    background-color: rgba(220, 53, 69, 0.05) !important; /* Very subtle background */
+    border-radius: 3px; /* Slight rounding */
+}
+
+/* --- Overlay Styles --- */
+#_megara-recorder-overlay {
+    /* Positioning & Stacking */
+    position: fixed;
+    z-index: 2147483647; /* Max z-index */
+    display: none; /* Hidden by default */
+
+    /* Appearance */
+    background-color: #ffffff; /* White background */
+    color: #212529; /* Dark text */
+    border: 1px solid #dee2e6; /* Light grey border */
+    border-radius: 0.375rem; /* Standard border radius (like Bootstrap) */
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); /* Standard shadow */
+
+    /* Sizing & Spacing */
+    padding: 1.25rem; /* ~20px */
+    min-width: 340px;
+    max-width: 500px;
+
+    /* Typography */
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Title */
+#_megara-recorder-overlay h4 {
+    margin-top: 0;
+    margin-bottom: 1rem; /* ~16px */
+    font-size: 1.1rem; /* ~17-18px */
+    font-weight: 500; /* Medium weight */
+    color: #000;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.75rem; /* ~12px */
+}
+
+/* Labels */
+#_megara-recorder-overlay label {
+    display: block;
+    margin-bottom: 0.3rem; /* ~5px */
+    font-size: 0.875em; /* ~12px */
+    font-weight: 500;
+    color: #495057; /* Darker grey */
+}
+
+/* Inputs: Select, Textarea */
+#_megara-recorder-overlay select,
+#_megara-recorder-overlay textarea {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem; /* ~8px 12px */
+    font-size: 0.9rem; /* Slightly smaller than base */
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    appearance: none; /* Remove default styling */
+    border-radius: 0.25rem; /* Slightly smaller radius */
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    margin-bottom: 1rem; /* More space below inputs */
+}
+#_megara-recorder-overlay textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+/* Add dropdown arrow for select */
+#_megara-recorder-overlay select {
+     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+     background-repeat: no-repeat;
+     background-position: right 0.75rem center;
+     background-size: 16px 12px;
+     padding-right: 2.25rem; /* Space for arrow */
+}
+
+
+/* Focus States */
+#_megara-recorder-overlay select:focus,
+#_megara-recorder-overlay textarea:focus {
+    color: #212529;
+    background-color: #fff;
+    border-color: #86b7fe; /* Bootstrap focus blue */
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Bootstrap focus shadow */
+}
+
+/* Element Info Box */
+#_megara-recorder-overlay ._mr-element-info {
+    font-size: 0.8em; /* Slightly smaller */
+    margin-bottom: 1rem;
+    word-wrap: break-word;
+    background-color: #e9ecef;
+    color: #495057;
+    padding: 0.5rem 0.75rem; /* Consistent padding */
+    border-radius: 0.25rem;
+    line-height: 1.4;
+}
+#_megara-recorder-overlay ._mr-element-info code {
+     background-color: #d1d8e0;
+     padding: 0.1em 0.4em; /* Tighter code padding */
+     border-radius: 0.2rem;
+     font-size: 0.95em;
+     font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Value Section (hidden by default) */
+#_megara-recorder-overlay ._mr-value-section {
+    display: none;
+}
+
+/* Error Message Area */
+#_megara-recorder-overlay ._mr-error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 0.75rem 1rem; /* More padding */
+    border-radius: 0.25rem;
+    margin-top: 0.5rem; /* Space above */
+    margin-bottom: 1rem; /* Space below */
+    font-size: 0.875em; /* ~12px */
+    display: none; /* Hidden by default */
+}
+
+/* Button Group */
+#_megara-recorder-overlay ._mr-button-group {
+    margin-top: 1rem;
+    text-align: right;
+    border-top: 1px solid #dee2e6; /* Separator */
+    padding-top: 1rem;
+}
+
+/* General Button Styling */
+#_megara-recorder-overlay button {
+    display: inline-block;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem; /* Standard button padding */
+    font-size: 0.9rem; /* Slightly smaller */
+    border-radius: 0.25rem;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    margin-left: 0.5rem; /* Space between buttons */
+}
+
+/* Save Button */
+#_megara-recorder-overlay ._mr-save-button {
+    color: #fff;
+    background-color: #198754; /* Bootstrap success green */
+    border-color: #198754;
+}
+#_megara-recorder-overlay ._mr-save-button:hover {
+    color: #fff;
+    background-color: #157347;
+    border-color: #146c43;
+}
+#_megara-recorder-overlay ._mr-save-button:disabled {
+     background-color: #198754;
+     border-color: #198754;
+     opacity: 0.65;
+     cursor: not-allowed;
+}
+
+
+/* Cancel Button */
+#_megara-recorder-overlay ._mr-cancel-button {
+    color: #fff;
+    background-color: #6c757d; /* Bootstrap secondary grey */
+    border-color: #6c757d;
+}
+#_megara-recorder-overlay ._mr-cancel-button:hover {
+    color: #fff;
+    background-color: #5c636a;
+    border-color: #565e64;
+}
+#_megara-recorder-overlay ._mr-cancel-button:disabled {
+     background-color: #6c757d;
+     border-color: #6c757d;
+     opacity: 0.65;
+     cursor: not-allowed;
+}

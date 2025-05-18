@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Monitoring Scenarios</h1>
+    <a href="{{ url_for('scenarios.create_scenario') }}" class="btn btn-primary mb-3">Create New Scenario</a>
+
+    {% if scenarios %}
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Target URL</th>
+                    <th>Schedule</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scenario in scenarios %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}">
+                                {{ scenario.name }}
+                            </a>
+                        </td>
+                        <td>{{ scenario.megara_url }}</td>
+                        <td>{{ scenario.schedule_cron }}</td>
+                        <td>{{ scenario.created_at.strftime('%Y-%m-%d %H:%M') if scenario.created_at else 'N/A' }}</td>
+                        <td>
+                            <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-sm btn-info">View</a>
+                            <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                            {# Delete Button Form #}
+                            <form action="{{ url_for('scenarios.delete_scenario', scenario_id=scenario.scenario_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete scenario \'{{ scenario.name }}\' and all its data?');">
+                                 {# Add CSRF token if using Flask-WTF globally later, or handle separately #}
+                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}"/> {# Basic CSRF needs setup #}
+                                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No scenarios found. Create one!</p>
+    {% endif %}
+{% endblock %}

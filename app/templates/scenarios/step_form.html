@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+
+    <form method="POST" action="{{ form_action }}" novalidate>
+        {{ form.hidden_tag() }} {# CSRF token #}
+
+        <div class="mb-3">
+            {{ form.sequence_order.label(class="form-label") }}
+            {# Make readonly if is_edit is False (i.e., adding a step) #}
+            {{ form.sequence_order(class="form-control" + (" is-invalid" if form.sequence_order.errors else ""), readonly=(not is_edit)) }}
+            <div class="form-text">{{ form.sequence_order.description }} {% if not is_edit %}Sequence order is determined automatically on add.{% endif %}</div>
+            {% for error in form.sequence_order.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.action_type.label(class="form-label") }} <span class="text-danger">*</span>
+            {{ form.action_type(class="form-select" + (" is-invalid" if form.action_type.errors else ""), required=True) }}
+            {% for error in form.action_type.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.selector.label(class="form-label") }} <span class="text-danger">*</span>
+            {{ form.selector(class="form-control" + (" is-invalid" if form.selector.errors else ""), required=True) }}
+             <div class="form-text">{{ form.selector.description }}</div>
+            {% for error in form.selector.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.value.label(class="form-label") }}
+            {{ form.value(class="form-control" + (" is-invalid" if form.value.errors else "")) }}
+             <div class="form-text">{{ form.value.description }}</div>
+            {% for error in form.value.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        {{ form.submit(class="btn btn-primary") }}
+        {# Link back to the specific scenario view page #}
+        <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}
