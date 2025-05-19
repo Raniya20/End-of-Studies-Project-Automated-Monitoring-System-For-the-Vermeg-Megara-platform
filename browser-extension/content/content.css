@@ -197,3 +197,43 @@
      opacity: 0.65;
      cursor: not-allowed;
 }
+#_mr-template-preview-grid-container {
+    margin-top: 10px;
+    max-height: 200px; /* Adjust as needed */
+    overflow: auto;    /* Allow both horizontal and vertical scroll */
+    border: 1px solid #ccc;
+    background-color: #fdfdfd;
+}
+
+#_mr-template-preview-grid { /* This will be the <table> */
+    border-collapse: collapse;
+    font-size: 0.85em;
+    width: 100%; /* Or set a min-width if content is narrow */
+}
+
+#_mr-template-preview-grid th,
+#_mr-template-preview-grid td {
+    border: 1px solid #ddd;
+    padding: 4px 6px;
+    text-align: left;
+    white-space: nowrap; /* Prevent wrapping initially */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Show ... if content too long */
+    max-width: 150px; /* Limit cell width */
+    cursor: pointer;
+}
+#_mr-template-preview-grid th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+#_mr-template-preview-grid td:hover,
+#_mr-template-preview-grid th:hover {
+    background-color: #e9ecef;
+}
+
+#_mr-template-preview-grid ._mr-cell-selected {
+    background-color: #007bff !important; /* Use !important to override hover */
+    color: white !important;
+    outline: 2px solid #0056b3;
+}

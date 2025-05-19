@@ -619,66 +619,150 @@ class AutomationRunner:
 
 
     def _generate_report(self):
-        """Generates the Excel report using a template and column mappings."""
-        if not self.log_entry: logging.error("Cannot generate report: Log entry missing."); return
-        if not self.scenario or not self.scenario.template: logging.info("No template configured."); return
-
-        template_path = self.scenario.template.file_path
-        logging.info(f"Attempting to use template path from DB: {template_path}")
-        if not os.path.exists(template_path):
-            logging.error(f"Template file not found: {template_path}")
-            self.log_entry.log_message = (self.log_entry.log_message or "") + f"\nERROR: Template not found {template_path}"
+        """
+        Generates the Excel report using a template, scenario-level column mappings
+        for tables, and step-level cell mappings for individual extracted elements.
+        """
+        if not self.log_entry:
+            logging.error("Cannot generate report: ExecutionLog entry not found.")
             return
 
-        mappings_query = self.scenario.column_mappings.all()
-        column_map = {mapping.scraped_header: mapping.template_header for mapping in mappings_query}
-        if not column_map: logging.warning("No column mappings defined.")
+        if not self.scenario or not self.scenario.template or not self.scenario.template.file_path:
+            logging.info("No report template configured or template path missing. Skipping report generation.")
+            return
 
-        report_df, report_label = None, None
-        for label, data in self.results.items():
-            if isinstance(data, pd.DataFrame): report_df, report_label = data, label; break
-        if report_df is None or report_df.empty: logging.warning("No DataFrame found/empty. Skipping report."); return
+        template_path = self.scenario.template.file_path
+        logging.info(f"Attempting to use template path from DB for report: {template_path}")
 
-        logging.info(f"Generating report using data '{report_label}' and template: {template_path}")
+        if not os.path.exists(template_path):
+            logging.error(f"Report template file not found at path: {template_path}")
+            self.log_entry.log_message = (self.log_entry.log_message or "") + f"\nERROR: Template file not found at {template_path}"
+            return
+
+        logging.info(f"Generating report using template: {template_path}")
         try:
             workbook = openpyxl.load_workbook(template_path)
+            # Assume data goes into the first/active sheet by default
+            # This could be made configurable later if needed
             sheet = workbook.active
-            logging.info(f"Using sheet: '{sheet.title}'")
+            logging.info(f"Using sheet: '{sheet.title}' for report generation.")
 
-            # Prepare data based on mappings, including anomaly column if it exists
-            template_headers_ordered = list(column_map.values())
-            mapped_data = pd.DataFrame()
-            for scraped_col, template_col in column_map.items():
-                if scraped_col in report_df.columns: mapped_data[template_col] = report_df[scraped_col]
-                else: logging.warning(f"Mapped column '{scraped_col}' not in data '{report_label}'."); mapped_data[template_col] = None
-            # Add anomaly column if it exists in source and has a mapping
-            if 'Is_Anomaly' in report_df.columns and 'Is_Anomaly' in column_map:
-                 mapped_data[column_map['Is_Anomaly']] = report_df['Is_Anomaly']
+            # --- 1. Process EXTRACT_TABLE results using scenario-level ColumnMappings ---
+            # Find the first DataFrame in results (assuming one main table for now)
+            report_df_source_label = None
+            report_df = None
+            for label, data in self.results.items():
+                if isinstance(data, pd.DataFrame) and not data.empty:
+                    report_df = data
+                    report_df_source_label = label
+                    logging.info(f"Found DataFrame '{report_df_source_label}' with {len(report_df)} rows to use for main table report.")
+                    break # Process first non-empty DataFrame encountered
 
-            # Reorder columns if possible
-            final_template_cols = [h for h in template_headers_ordered if h in mapped_data.columns]
-            mapped_data = mapped_data[final_template_cols]
+            if report_df is not None:
+                scenario_column_map_objects = self.scenario.column_mappings.all()
+                if not scenario_column_map_objects:
+                    logging.warning(f"No scenario-level column mappings defined for table data '{report_df_source_label}'. Table data might not be written as expected.")
+                else:
+                    column_map = {mapping.scraped_header: mapping.template_header for mapping in scenario_column_map_objects}
+                    logging.debug(f"Applying column mappings for table: {column_map}")
 
-            # Write data
-            start_row = sheet.max_row + 1 if sheet.max_row > 1 else 2
-            logging.info(f"Writing data starting from row {start_row}")
-            for r_idx, row in enumerate(dataframe_to_rows(mapped_data, index=False, header=False), start=start_row):
-                for c_idx, value in enumerate(row, start=1): sheet.cell(row=r_idx, column=c_idx, value=value)
+                    # Prepare data based on scenario-level mappings
+                    template_headers_ordered = [column_map[h] for h in report_df.columns if h in column_map] # Order by mapped headers found
+                    mapped_data = pd.DataFrame()
+                    for scraped_col, template_col_name in column_map.items():
+                        if scraped_col in report_df.columns:
+                            mapped_data[template_col_name] = report_df[scraped_col]
+                        else:
+                            logging.debug(f"  Table mapping: Scraped column '{scraped_col}' not in DataFrame '{report_df_source_label}'.")
+                            # mapped_data[template_col_name] = None # Optionally add empty column
 
-            # Save file
-            output_dir = Path(os.environ.get('REPORT_OUTPUT_DIR', './generated_reports'))
+                    # Ensure columns are in the order they appear in the mappings (if desired)
+                    # Or write based on template header existence.
+                    # For simplicity, we iterate dataframe_to_rows on the potentially reordered mapped_data
+                    if not mapped_data.empty:
+                        # Try to reorder based on the order of values in column_map if needed
+                        # For now, dataframe_to_rows will use mapped_data's current column order.
+                        # If template_headers_ordered is important for specific placement:
+                        # mapped_data_final = mapped_data[[h for h in template_headers_ordered if h in mapped_data.columns]]
+
+                        # Find start row (e.g., after existing headers in template, or first empty)
+                        # A common approach is to find the first empty row after row 1 (header)
+                        start_row = 1
+                        while sheet.cell(row=start_row, column=1).value is not None:
+                            start_row += 1
+                        if start_row == 1 and sheet.max_row >= 1: # If sheet has content but first data row is 1
+                            start_row = sheet.max_row + 1
+
+                        logging.info(f"Writing table data from '{report_df_source_label}' to sheet '{sheet.title}' starting from row {start_row}")
+
+                        # Write rows using openpyxl utility (writes data only, not headers)
+                        # Assuming template already has headers. If not, write mapped_data.columns first.
+                        for r_idx, row_values in enumerate(dataframe_to_rows(mapped_data, index=False, header=False), start=start_row):
+                            for c_idx, value in enumerate(row_values, start=1):
+                                sheet.cell(row=r_idx, column=c_idx, value=value)
+                        logging.info(f"  Wrote {len(mapped_data)} rows of table data.")
+                    else:
+                         logging.info(f"  No data from '{report_df_source_label}' matched scenario-level column mappings.")
+            else:
+                logging.info("No DataFrame results found to populate main table section of report.")
+
+
+            # --- 2. Process EXTRACT_ELEMENT results with direct cell mapping ---
+            # Fetch steps that have a specific cell mapping target
+            steps_with_cell_mapping = ScenarioStep.query.filter(
+                ScenarioStep.scenario_id == self.scenario.scenario_id,
+                ScenarioStep.mapping_target_cell.isnot(None),
+                ScenarioStep.mapping_target_cell != '', # Ensure it's not an empty string
+                ScenarioStep.action_type == ActionTypeEnum.EXTRACT_ELEMENT
+            ).all()
+
+            if steps_with_cell_mapping:
+                logging.info(f"Processing {len(steps_with_cell_mapping)} EXTRACT_ELEMENT steps with direct cell mappings...")
+            for step_info in steps_with_cell_mapping:
+                # The 'value' of the EXTRACT_ELEMENT step was used as the 'label' in self.results
+                result_label = step_info.value # This is the key in self.results
+                target_cell = step_info.mapping_target_cell.upper() # e.g., "A5"
+
+                if result_label in self.results:
+                    cell_value_to_write = self.results[result_label]
+                    if isinstance(cell_value_to_write, pd.DataFrame):
+                        logging.warning(f"  Step {step_info.sequence_order} (Label: '{result_label}') extracted a DataFrame but target '{target_cell}' is a single cell. Skipping this mapping.")
+                        continue
+
+                    # Validate cell reference format (basic check)
+                    if re.match(r"^[A-Z]+[1-9]\d*$", target_cell):
+                        try:
+                            sheet[target_cell] = cell_value_to_write
+                            logging.info(f"  Wrote value '{str(cell_value_to_write)[:50]}...' to cell {target_cell} (from step {step_info.sequence_order} mapping).")
+                        except Exception as cell_write_error:
+                            logging.error(f"  Error writing value to cell '{target_cell}' for step {step_info.sequence_order}: {cell_write_error}")
+                    else:
+                        logging.warning(f"  Invalid target cell format '{target_cell}' for step {step_info.sequence_order}. Skipping cell mapping.")
+                else:
+                    logging.warning(f"  No result found in self.results for label '{result_label}' (from step {step_info.sequence_order} mapping_target_cell).")
+
+
+            # --- 3. Save the populated workbook ---
+            output_dir = Path(self.app.config.get('REPORT_OUTPUT_DIR', './generated_reports')) # Use app config
             output_dir.mkdir(parents=True, exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             safe_scenario_name = "".join(c if c.isalnum() else "_" for c in self.scenario.name)
             output_filename = f"Scenario_{self.scenario_id}_{safe_scenario_name}_{timestamp}.xlsx"
             output_path = output_dir / output_filename
             output_path_str = str(output_path.resolve())
+
             workbook.save(output_path)
             logging.info(f"Report saved successfully to: {output_path_str}")
-            self.log_entry.report_file_path = output_path_str # Update log entry field
+
+            # Update ExecutionLog with the report path
+            if self.log_entry:
+                self.log_entry.report_file_path = output_path_str
+                # The final commit happens in _teardown, so this will be saved.
+
         except Exception as e:
             logging.error(f"Error generating report: {e}", exc_info=True)
-            self.log_entry.log_message = (self.log_entry.log_message or "") + f"\nERROR: Report generation failed: {e}"
+            if self.log_entry:
+                self.log_entry.log_message = (self.log_entry.log_message or "") + f"\nERROR: Report generation failed: {e}"
 
     def _deliver_report(self):
         """Sends the generated report via email if configured."""

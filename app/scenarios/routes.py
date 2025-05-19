@@ -590,55 +590,97 @@ def delete_step(scenario_id, step_id):
 # @login_required # Remove this
 @token_required # Use the JWT token decorator
 def api_add_step(scenario_id):
-    """API endpoint to add a new step using JWT authentication."""
-    # Access user from g
-    user = g.current_user
-    if not user: return jsonify({"success": False, "message": "Authentication failed"}), 401
+    """
+    API endpoint to add a new step to a scenario, including optional
+    mapping information (target header or target cell).
+    Receives step data via JSON payload from the browser extension.
+    """
+    user = g.current_user # User object set by @token_required decorator
+    if not user:
+        # This should theoretically be caught by @token_required, but defensive check
+        return jsonify({"success": False, "message": "Authentication token invalid or user not found"}), 401
 
-    scenario = Scenario.query.get_or_404(scenario_id)
-    # Check ownership using user from token
+    scenario = db.session.get(Scenario, scenario_id)
+    if not scenario:
+        return jsonify({"success": False, "message": "Scenario not found"}), 404
+
+    # Check ownership: ensure the scenario belongs to the authenticated user
     if scenario.created_by_user_id != user.user_id:
-        return jsonify({"success": False, "message": "Permission denied"}), 403
+        return jsonify({"success": False, "message": "Permission denied to modify this scenario"}), 403
 
     data = request.get_json()
-    # ... (Keep data validation as before) ...
-    if not data or not data.get('action_type') or not data.get('selector'):
-         return jsonify({"success": False, "message": "Missing action_type or selector"}), 400
+    if not data:
+        return jsonify({"success": False, "message": "Invalid JSON payload"}), 400
+
+    # Extract data from payload
     action_str = data.get('action_type')
-    selector = data.get('selector')
-    value = data.get('value')
-    try: action_enum = ActionTypeEnum[action_str]
-    except KeyError: return jsonify({"success": False, "message": f"Invalid action_type: {action_str}"}), 400
+    selector = data.get('selector') # For desktop, this will be JSON string of criteria
+    value = data.get('value')       # Can be None for certain actions
+
+    # --- Get mapping information ---
+    # The extension might send one or the other, or neither
+    # mapping_target_header = data.get('mapping_target_header')
+    mapping_target_cell = data.get('mapping_target_cell')
+    # --- End mapping information ---
+
+
+    # Validate required fields
+    if not action_str:
+         return jsonify({"success": False, "message": "Missing 'action_type'"}), 400
+    # Selector is not strictly required for all actions (e.g., WAIT_FOR_TIMEOUT, or NAVIGATE to a fixed URL)
+    # but the form usually enforces it. We can add more specific validation if needed.
+    if not selector and action_str not in ['WAIT_FOR_TIMEOUT', 'NAVIGATE']: # Adjust as needed
+         logging.warning(f"API: Adding step with action '{action_str}' but no selector provided.")
+         # For NAVIGATE, if selector is empty, the runner uses scenario.megara_url or step.value if provided
+         # For WAIT_FOR_TIMEOUT, selector is irrelevant.
 
     try:
-        # ... (Keep logic for calculating next_order) ...
-        last_order = db.session.query(func.max(ScenarioStep.sequence_order)).filter_by(scenario_id=scenario.scenario_id).scalar()
+        action_enum = ActionTypeEnum[action_str.upper()] # Convert string to Enum member
+    except KeyError:
+         return jsonify({"success": False, "message": f"Invalid action_type: '{action_str}'. Valid types are: {[e.name for e in ActionTypeEnum]}"}), 400
+
+    try:
+        # Determine the next sequence order for the new step
+        last_order = db.session.query(func.max(ScenarioStep.sequence_order))\
+            .filter_by(scenario_id=scenario.scenario_id)\
+            .scalar()
         next_order = (last_order or 0) + 1
+
         new_step = ScenarioStep(
             scenario_id=scenario.scenario_id,
             sequence_order=next_order,
             action_type=action_enum,
-            selector=selector,
-            value=value
+            selector=selector if selector is not None else "", # Ensure selector is string, even if empty
+            value=value,
+            #mapping_target_header=mapping_target_header,
+            mapping_target_cell=mapping_target_cell
         )
         db.session.add(new_step)
         db.session.commit()
-        logging.info(f"API: Added step {next_order} to scenario {scenario_id} for user {user.user_id}")
-        return jsonify({ # Return JSON success
+
+        #logging.info(f"API: Step {next_order} (ID: {new_step.step_id}) added to scenario {scenario_id} for user {user.user_id}. "f"Mapping Header: {mapping_target_header}, Mapping Cell: {mapping_target_cell}")
+
+        # Return success and the details of the created step
+        return jsonify({
             "success": True,
             "message": "Step added successfully",
             "step": {
                 "step_id": new_step.step_id,
+                "scenario_id": new_step.scenario_id,
                 "sequence_order": new_step.sequence_order,
-                "action_type": new_step.action_type.name,
+                "action_type": new_step.action_type.name, # Send enum name
                 "selector": new_step.selector,
-                "value": new_step.value
+                "value": new_step.value,
+                #"mapping_target_header": new_step.mapping_target_header,
+                "mapping_target_cell": new_step.mapping_target_cell,
+                "created_at": new_step.created_at.isoformat() if new_step.created_at else None
             }
         }), 201 # HTTP 201 Created status
+
     except Exception as e:
         db.session.rollback()
         logging.error(f"API Error adding step for scenario {scenario_id}: {e}", exc_info=True)
-        return jsonify({"success": False, "message": f"Internal server error: {e}"}), 500
+        return jsonify({"success": False, "message": f"Internal server error while saving step: {str(e)}"}), 500
 
 # --- PROTECTED API ROUTE: List Scenarios ---
 @bp.route('/api/scenarios/list', methods=['GET'])
@@ -657,3 +699,45 @@ def api_list_scenarios():
     except Exception as e:
         logging.error(f"API Error listing scenarios for user {user.user_id}: {e}", exc_info=True)
         return jsonify({"success": False, "message": f"Internal server error: {e}"}), 500
+
+@bp.route('/api/scenarios/<int:scenario_id>/template/preview', methods=['GET'])
+@token_required
+def api_get_template_preview(scenario_id):
+    """API endpoint to get a preview (e.g., first N rows/cols) of the scenario's template."""
+    user = g.current_user
+    scenario = db.session.get(Scenario, scenario_id)
+
+    if not scenario: return jsonify({"success": False, "message": "Scenario not found"}), 404
+    if scenario.created_by_user_id != user.user_id: return jsonify({"success": False, "message": "Permission denied"}), 403
+    if not scenario.template or not scenario.template.file_path:
+        return jsonify({"success": False, "message": "No template for scenario"}), 404
+    if not os.path.exists(scenario.template.file_path):
+        logging.error(f"API: Template file not found for preview: {scenario.template.file_path}")
+        return jsonify({"success": False, "message": "Template file not found on server"}), 500
+
+    try:
+        workbook = openpyxl.load_workbook(scenario.template.file_path, read_only=True, data_only=True)
+        sheet = workbook.active # Get the first sheet
+
+        # --- Extract data for preview (e.g., first 5 rows, first 5 columns) ---
+        max_rows_preview = 5
+        max_cols_preview = 5
+        preview_data = [] # List of lists
+
+        for r_idx, row in enumerate(sheet.iter_rows(max_row=max_rows_preview)):
+            row_data = []
+            for c_idx, cell in enumerate(row):
+                if c_idx >= max_cols_preview: break # Limit columns
+                row_data.append(str(cell.value) if cell.value is not None else "") # Convert to string
+            preview_data.append(row_data)
+
+        workbook.close()
+
+        if not preview_data:
+            return jsonify({"success": True, "preview_data": [], "message": "Template is empty or no data in preview range."})
+
+        return jsonify({"success": True, "preview_data": preview_data}) # Send list of lists
+    except Exception as e:
+        logging.error(f"API Error getting template preview for scenario {scenario_id}: {e}", exc_info=True)
+        return jsonify({"success": False, "message": f"Error reading template preview: {e}"}), 500
+

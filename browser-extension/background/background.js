@@ -130,49 +130,106 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             break;
 
         case "startRecording":
-            const scenarioIdFromPopup = message.scenarioId;
-            if (!scenarioIdFromPopup) { sendResponse({ status: "Status: Error (No Scenario Selected)" }); break; }
-            (async () => {
-                const currentState = await getState();
-                if (currentState.isRecording) { sendResponse({ status: "Status: Already Recording" }); return; }
-                const token = await getStoredToken();
-                if (!token) { sendResponse({ status: "Status: Error (Not Logged In)" }); return; }
+    const scenarioIdFromPopup = message.scenarioId;
+    if (!scenarioIdFromPopup) {
+        sendResponse({ status: "Status: Error (No Scenario Selected)" });
+        break;
+    }
 
-                chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-                    if (!tabs || tabs.length === 0) { sendResponse({ status: "Status: Error (No active tab)" }); return; }
-                    const tabIdToRecord = tabs[0].id;
+    (async () => {
+        const currentState = await getState();
+        if (currentState.isRecording) {
+            sendResponse({ status: "Status: Already Recording" });
+            return;
+        }
 
-                    const trySendingActivation = (attempt = 1) => {
-                        return new Promise((resolve, reject) => {
-                            console.log(`BG: Attempt ${attempt} to activate Tab ${tabIdToRecord} for Scenario ${scenarioIdFromPopup}`);
-                            chrome.tabs.sendMessage(tabIdToRecord, { action: "activateRecording" }, (response) => {
-                                if (chrome.runtime.lastError) {
-                                    const errorMsg = chrome.runtime.lastError.message || "Unknown connection error";
-                                    console.error(`BG: Attempt ${attempt} - Activate error:`, errorMsg);
-                                    if (errorMsg.includes("Receiving end does not exist") && attempt < 3) {
-                                        setTimeout(() => trySendingActivation(attempt + 1).then(resolve).catch(reject), 500);
-                                    } else { reject(new Error(errorMsg)); }
-                                } else { console.log("BG: Activation successful. Response:", response); resolve(true); }
-                            });
-                        });
-                    };
+        const token = await getStoredToken();
+        if (!token) {
+            sendResponse({ status: "Status: Error (Not Logged In)" });
+            return;
+        }
+
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            if (!tabs || tabs.length === 0) {
+                sendResponse({ status: "Status: Error (No active tab)" });
+                return;
+            }
+
+            const tabIdToRecord = tabs[0].id;
+
+            const trySendingActivation = (attempt = 1) => {
+                return new Promise((resolve, reject) => {
+                    console.log(`BG: Attempt ${attempt} to activate Tab ${tabIdToRecord} for Scenario ${scenarioIdFromPopup}`);
+                    chrome.tabs.sendMessage(tabIdToRecord, { action: "activateRecording" }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            const errorMsg = chrome.runtime.lastError.message || "Unknown connection error";
+                            console.error(`BG: Attempt ${attempt} - Activate error:`, errorMsg);
+                            if (errorMsg.includes("Receiving end does not exist") && attempt < 3) {
+                                setTimeout(() => trySendingActivation(attempt + 1).then(resolve).catch(reject), 500);
+                            } else {
+                                reject(new Error(errorMsg));
+                            }
+                        } else {
+                            console.log("BG: Activation successful. Response:", response);
+                            resolve(true);
+                        }
+                    });
+                });
+            };
+
+            try {
+                await trySendingActivation();
+                await setState({
+                    [STORAGE_KEYS.IS_RECORDING]: true,
+                    [STORAGE_KEYS.ACTIVE_TAB_ID]: tabIdToRecord,
+                    [STORAGE_KEYS.CURRENT_SCENARIO_ID]: scenarioIdFromPopup
+                });
+                sendResponse({ status: "Status: Recording..." });
+
+                // === FETCH AND SEND TEMPLATE PREVIEW DATA ===
+                if (token && scenarioIdFromPopup) {
+                    const previewApiUrl = `http://localhost:5051/scenarios/api/scenarios/${scenarioIdFromPopup}/template/preview`;
+                    console.log(`BG: Fetching template PREVIEW from ${previewApiUrl}`);
 
                     try {
-                        await trySendingActivation();
-                        await setState({
-                            [STORAGE_KEYS.IS_RECORDING]: true,
-                            [STORAGE_KEYS.ACTIVE_TAB_ID]: tabIdToRecord,
-                            [STORAGE_KEYS.CURRENT_SCENARIO_ID]: scenarioIdFromPopup
-                         });
-                        sendResponse({ status: "Status: Recording..." });
+                        const previewResponse = await fetch(previewApiUrl, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (!previewResponse.ok) throw new Error(`API Error ${previewResponse.status} for preview`);
+
+                        const previewData = await previewResponse.json();
+                        if (previewData.success) {
+                            console.log(`BG: Sending template PREVIEW to content script (Tab ${tabIdToRecord}):`, previewData.preview_data);
+                            chrome.tabs.sendMessage(tabIdToRecord, {
+                                action: "setTemplatePreview",
+                                previewData: previewData.preview_data || []
+                            });
+                        } else {
+                            console.warn("BG: API failed to return template preview:", previewData.message);
+                        }
                     } catch (error) {
-                        console.error("BG: Final activation attempt failed:", error);
-                        await setState({ [STORAGE_KEYS.IS_RECORDING]: false, [STORAGE_KEYS.ACTIVE_TAB_ID]: null, [STORAGE_KEYS.CURRENT_SCENARIO_ID]: null });
-                        sendResponse({ status: "Status: Error Activating Content Script" });
+                        console.error("BG: Error fetching/sending template preview:", error);
                     }
-                }); // End chrome.tabs.query
-            })(); // Execute async IIFE
-            break;
+                }
+                // === END FETCH AND SEND TEMPLATE PREVIEW ===
+
+            } catch (error) {
+                console.error("BG: Final activation attempt failed:", error);
+                await setState({
+                    [STORAGE_KEYS.IS_RECORDING]: false,
+                    [STORAGE_KEYS.ACTIVE_TAB_ID]: null,
+                    [STORAGE_KEYS.CURRENT_SCENARIO_ID]: null
+                });
+                sendResponse({ status: "Status: Error Activating Content Script" });
+            }
+        });
+    })();
+    break;
+
 
         case "stopRecording":
              (async () => {

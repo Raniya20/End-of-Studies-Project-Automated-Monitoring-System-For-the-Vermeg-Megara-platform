@@ -112,6 +112,7 @@ class ScenarioStep(db.Model):
     selector = db.Column(db.Text, nullable=False) # CSS or XPath
     value = db.Column(db.Text, nullable=True) # Value for TYPE/SELECT, URL for NAVIGATE, label for EXTRACT, state/timeout for WAIT
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    mapping_target_cell = db.Column(db.String(50), nullable=True)
 
     # Foreign Key
     scenario_id = db.Column(db.Integer, db.ForeignKey('scenario.scenario_id'), nullable=False, index=True)
