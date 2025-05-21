@@ -701,43 +701,118 @@ def api_list_scenarios():
         return jsonify({"success": False, "message": f"Internal server error: {e}"}), 500
 
 @bp.route('/api/scenarios/<int:scenario_id>/template/preview', methods=['GET'])
-@token_required
+@token_required # Ensure the user is authenticated and g.current_user is set
 def api_get_template_preview(scenario_id):
-    """API endpoint to get a preview (e.g., first N rows/cols) of the scenario's template."""
-    user = g.current_user
+    """
+    API endpoint to get a preview of the scenario's report template.
+    Allows specifying a sheet_name via query parameter.
+    Defaults to the first active sheet if no sheet_name is provided.
+    Generates a grid of empty cells up to max_rows/max_cols if actual data is less.
+    Accepts optional query parameters: sheet_name, max_rows, max_cols.
+    """
+    user = g.current_user # User object from the @token_required decorator
     scenario = db.session.get(Scenario, scenario_id)
 
-    if not scenario: return jsonify({"success": False, "message": "Scenario not found"}), 404
-    if scenario.created_by_user_id != user.user_id: return jsonify({"success": False, "message": "Permission denied"}), 403
+    # --- Validations ---
+    if not scenario:
+        return jsonify({"success": False, "message": "Scenario not found"}), 404
+    if scenario.created_by_user_id != user.user_id:
+        return jsonify({"success": False, "message": "Permission denied to access this scenario's template"}), 403
     if not scenario.template or not scenario.template.file_path:
-        return jsonify({"success": False, "message": "No template for scenario"}), 404
+        return jsonify({"success": False, "message": "No report template associated with this scenario or path is missing"}), 404
     if not os.path.exists(scenario.template.file_path):
-        logging.error(f"API: Template file not found for preview: {scenario.template.file_path}")
-        return jsonify({"success": False, "message": "Template file not found on server"}), 500
+        logging.error(f"API: Template file not found at path: {scenario.template.file_path} for scenario {scenario_id}")
+        return jsonify({"success": False, "message": "Template file not found on server. Please re-upload."}), 500
+    # --- End Validations ---
 
+    workbook = None # Initialize for finally block
     try:
+        # Load the workbook in read-only and data_only mode
         workbook = openpyxl.load_workbook(scenario.template.file_path, read_only=True, data_only=True)
-        sheet = workbook.active # Get the first sheet
+        all_sheet_names = workbook.sheetnames # Get all available sheet names
 
-        # --- Extract data for preview (e.g., first 5 rows, first 5 columns) ---
-        max_rows_preview = 5
-        max_cols_preview = 5
-        preview_data = [] # List of lists
+        if not all_sheet_names:
+             workbook.close() # Close before returning
+             return jsonify({"success": False, "message": "The Excel template contains no sheets."}), 400
 
-        for r_idx, row in enumerate(sheet.iter_rows(max_row=max_rows_preview)):
-            row_data = []
-            for c_idx, cell in enumerate(row):
-                if c_idx >= max_cols_preview: break # Limit columns
-                row_data.append(str(cell.value) if cell.value is not None else "") # Convert to string
-            preview_data.append(row_data)
+        # --- Sheet Selection Logic ---
+        requested_sheet_name = request.args.get('sheet_name')
+        sheet_to_use = None
+        sheet_name_to_report = None
 
-        workbook.close()
+        if requested_sheet_name:
+            if requested_sheet_name in all_sheet_names:
+                sheet_to_use = workbook[requested_sheet_name]
+                sheet_name_to_report = requested_sheet_name
+                logging.info(f"API: Using requested sheet: '{requested_sheet_name}' for preview.")
+            else:
+                logging.warning(f"API: Requested sheet '{requested_sheet_name}' not found in template. Available: {all_sheet_names}. Defaulting to first active sheet.")
+                sheet_to_use = workbook.active
+                sheet_name_to_report = sheet_to_use.title
+        else:
+            # Default to the first active sheet if no sheet_name is provided
+            sheet_to_use = workbook.active
+            sheet_name_to_report = sheet_to_use.title
+            logging.info(f"API: No sheet_name requested, using active sheet: '{sheet_name_to_report}' for preview.")
+        # --- End Sheet Selection ---
 
-        if not preview_data:
-            return jsonify({"success": True, "preview_data": [], "message": "Template is empty or no data in preview range."})
+        # --- Define preview range (how many rows/cols to construct the grid for) ---
+        try:
+            max_rows_to_show_in_preview = int(request.args.get('max_rows', 20)) # How many rows to construct in preview
+            max_cols_to_show_in_preview = int(request.args.get('max_cols', 10)) # How many cols to construct in preview
+        except ValueError:
+            workbook.close() # Close before returning
+            return jsonify({"success": False, "message": "Invalid max_rows or max_cols parameter."}), 400
 
-        return jsonify({"success": True, "preview_data": preview_data}) # Send list of lists
+        logging.info(f"API: Generating preview grid - Max Display Rows: {max_rows_to_show_in_preview}, Max Display Cols: {max_cols_to_show_in_preview}")
+
+        preview_data = [] # List of lists for cell values
+
+        for r_idx in range(1, max_rows_to_show_in_preview + 1): # Iterate up to max_rows_to_show
+            current_row_data = []
+            for c_idx in range(1, max_cols_to_show_in_preview + 1): # Iterate up to max_cols_to_show
+                # Get cell directly by its coordinates from the selected sheet
+                # openpyxl is 1-indexed for rows and columns
+                cell = sheet_to_use.cell(row=r_idx, column=c_idx)
+                # Store cell value as string, or empty string if cell is None or has no value
+                current_row_data.append(str(cell.value) if cell.value is not None else "")
+            preview_data.append(current_row_data)
+
+        # Get actual sheet dimensions from openpyxl for context
+        actual_sheet_max_row = sheet_to_use.max_row
+        actual_sheet_max_col = sheet_to_use.max_column
+        # Handle openpyxl reporting 1x1 for a truly blank sheet (just created, never touched)
+        if actual_sheet_max_row == 1 and actual_sheet_max_col == 1 and sheet_to_use['A1'].value is None:
+            actual_sheet_max_row = 0
+            actual_sheet_max_col = 0
+
+        workbook.close() # Close workbook after reading all necessary data
+
+        message = "Preview data fetched successfully."
+        # Check if all cells in the generated preview_data are empty strings
+        if not any(any(cell_val for cell_val in row) for row in preview_data):
+            message = "Preview range appears to be empty or contains no values."
+            if actual_sheet_max_row == 0 : # If the sheet itself is reported as empty
+                message = "Template sheet appears to be completely empty."
+
+        return jsonify({
+            "success": True,
+            "sheet_name": sheet_name_to_report,    # Name of the sheet used
+            "all_sheet_names": all_sheet_names,   # List of all available sheets
+            "preview_data": preview_data,         # The grid of cell values (strings)
+            "fetched_rows": len(preview_data),    # Number of rows in preview_data (max_rows_to_show_in_preview)
+            "fetched_cols": len(preview_data[0]) if preview_data and preview_data[0] else 0, # Number of cols in preview_data (max_cols_to_show_in_preview)
+            "actual_rows_in_sheet": actual_sheet_max_row, # Max row from openpyxl for the sheet
+            "actual_cols_in_sheet": actual_sheet_max_col, # Max col from openpyxl for the sheet
+            "message": message
+        })
+
     except Exception as e:
         logging.error(f"API Error getting template preview for scenario {scenario_id}: {e}", exc_info=True)
-        return jsonify({"success": False, "message": f"Error reading template preview: {e}"}), 500
-
+        # Ensure workbook is closed if it was opened and an error occurred
+        if 'workbook' in locals() and workbook and not workbook.read_only: # read_only workbooks don't need explicit close on error as much
+            try:
+                workbook.close()
+            except Exception as e_close:
+                logging.error(f"Error closing workbook during exception handling: {e_close}")
+        return jsonify({"success": False, "message": f"Error reading template preview: {str(e)}"}), 500

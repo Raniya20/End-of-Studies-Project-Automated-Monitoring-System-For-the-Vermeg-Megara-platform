@@ -129,106 +129,125 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
             break;
 
+        // background.js
+
         case "startRecording":
-    const scenarioIdFromPopup = message.scenarioId;
-    if (!scenarioIdFromPopup) {
-        sendResponse({ status: "Status: Error (No Scenario Selected)" });
-        break;
-    }
-
-    (async () => {
-        const currentState = await getState();
-        if (currentState.isRecording) {
-            sendResponse({ status: "Status: Already Recording" });
-            return;
-        }
-
-        const token = await getStoredToken();
-        if (!token) {
-            sendResponse({ status: "Status: Error (Not Logged In)" });
-            return;
-        }
-
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-            if (!tabs || tabs.length === 0) {
-                sendResponse({ status: "Status: Error (No active tab)" });
-                return;
+            const scenarioIdForThisRecording = message.scenarioId; // Use a clear, distinct name
+            if (!scenarioIdForThisRecording) {
+                sendResponse({ status: "Status: Error (Missing Scenario ID)" });
+                break;
             }
 
-            const tabIdToRecord = tabs[0].id;
+            (async () => { // Main async block for this action
+                try {
+                    const currentState = await getState();
+                    if (currentState.isRecording) {
+                        sendResponse({ status: "Status: Already Recording" });
+                        return;
+                    }
 
-            const trySendingActivation = (attempt = 1) => {
-                return new Promise((resolve, reject) => {
-                    console.log(`BG: Attempt ${attempt} to activate Tab ${tabIdToRecord} for Scenario ${scenarioIdFromPopup}`);
-                    chrome.tabs.sendMessage(tabIdToRecord, { action: "activateRecording" }, (response) => {
-                        if (chrome.runtime.lastError) {
-                            const errorMsg = chrome.runtime.lastError.message || "Unknown connection error";
-                            console.error(`BG: Attempt ${attempt} - Activate error:`, errorMsg);
-                            if (errorMsg.includes("Receiving end does not exist") && attempt < 3) {
-                                setTimeout(() => trySendingActivation(attempt + 1).then(resolve).catch(reject), 500);
-                            } else {
-                                reject(new Error(errorMsg));
-                            }
-                        } else {
-                            console.log("BG: Activation successful. Response:", response);
-                            resolve(true);
-                        }
-                    });
-                });
-            };
+                    const token = await getStoredToken();
+                    if (!token) {
+                        sendResponse({ status: "Status: Error (Not Logged In)" });
+                        return;
+                    }
 
-            try {
-                await trySendingActivation();
-                await setState({
-                    [STORAGE_KEYS.IS_RECORDING]: true,
-                    [STORAGE_KEYS.ACTIVE_TAB_ID]: tabIdToRecord,
-                    [STORAGE_KEYS.CURRENT_SCENARIO_ID]: scenarioIdFromPopup
-                });
-                sendResponse({ status: "Status: Recording..." });
+                    // Get active tab
+                    const tabs = await new Promise((resolve) => chrome.tabs.query({ active: true, currentWindow: true }, resolve));
+                    if (!tabs || tabs.length === 0) {
+                        sendResponse({ status: "Status: Error (No active tab)" });
+                        return;
+                    }
+                    const tabIdToRecord = tabs[0].id;
 
-                // === FETCH AND SEND TEMPLATE PREVIEW DATA ===
-                if (token && scenarioIdFromPopup) {
-                    const previewApiUrl = `http://localhost:5051/scenarios/api/scenarios/${scenarioIdFromPopup}/template/preview`;
-                    console.log(`BG: Fetching template PREVIEW from ${previewApiUrl}`);
-
-                    try {
-                        const previewResponse = await fetch(previewApiUrl, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Accept': 'application/json'
-                            }
+                    // Define activation attempt function
+                    const trySendingActivation = (attempt = 1) => {
+                        return new Promise((resolveActivation, rejectActivation) => {
+                            console.log(`BG: Attempt ${attempt} activate Tab ${tabIdToRecord} for Scenario ${scenarioIdForThisRecording}`);
+                            chrome.tabs.sendMessage(tabIdToRecord, { action: "activateRecording" }, (response) => {
+                                if (chrome.runtime.lastError) {
+                                    const errorMsg = chrome.runtime.lastError.message || "Unknown connection error";
+                                    console.error(`BG: Attempt ${attempt} - Activate error:`, errorMsg);
+                                    if (errorMsg.includes("Receiving end does not exist") && attempt < 3) {
+                                        setTimeout(() => trySendingActivation(attempt + 1).then(resolveActivation).catch(rejectActivation), 500);
+                                    } else {
+                                        rejectActivation(new Error(errorMsg));
+                                    }
+                                } else {
+                                    console.log("BG: Activation successful. Response:", response);
+                                    resolveActivation(true);
+                                }
+                            });
                         });
+                    }; // End trySendingActivation
 
-                        if (!previewResponse.ok) throw new Error(`API Error ${previewResponse.status} for preview`);
+                    // Attempt activation
+                    await trySendingActivation();
 
-                        const previewData = await previewResponse.json();
-                        if (previewData.success) {
-                            console.log(`BG: Sending template PREVIEW to content script (Tab ${tabIdToRecord}):`, previewData.preview_data);
+                    // If activation successful, set state and fetch template
+                    await setState({
+                        [STORAGE_KEYS.IS_RECORDING]: true,
+                        [STORAGE_KEYS.ACTIVE_TAB_ID]: tabIdToRecord,
+                        [STORAGE_KEYS.CURRENT_SCENARIO_ID]: scenarioIdForThisRecording // Use the correctly scoped ID
+                    });
+                    sendResponse({ status: "Status: Recording..." }); // Respond to popup
+
+                    // Fetch and send template preview
+                    // Token is already confirmed above
+                    if (scenarioIdForThisRecording) { // scenarioIdForThisRecording is definitely in scope here
+                        const previewApiUrl = `http://localhost:5051/scenarios/api/scenarios/${scenarioIdForThisRecording}/template/preview`;
+                        console.log(`BG: Fetching template PREVIEW from ${previewApiUrl}`);
+                        const headersResponse = await fetch(previewApiUrl, {
+                            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                        });
+                        if (!headersResponse.ok) {
+                            const errorText = await headersResponse.text();
+                            throw new Error(`API Error ${headersResponse.status} for template preview: ${errorText}`);
+                        }
+                        const previewApiResponse = await headersResponse.json();
+                        console.log("BACKGROUND.JS: API response for /template/preview:", previewApiResponse);
+
+                        if (previewApiResponse.success) {
+                            console.log("BACKGROUND.JS: Sending template PREVIEW to content script:", previewApiResponse.preview_data);
                             chrome.tabs.sendMessage(tabIdToRecord, {
                                 action: "setTemplatePreview",
-                                previewData: previewData.preview_data || []
+                                sheetName: previewApiResponse.sheet_name,
+                                allSheetNames: previewApiResponse.all_sheet_names || [],
+                                previewData: previewApiResponse.preview_data || [],
+                                fetchedRows: previewApiResponse.fetched_rows,
+                                fetchedCols: previewApiResponse.fetched_cols,
+                                actualRowsInSheet: previewApiResponse.actual_rows_in_sheet,
+                                actualColsInSheet: previewApiResponse.actual_cols_in_sheet,
+                                message: previewApiResponse.message
                             });
                         } else {
-                            console.warn("BG: API failed to return template preview:", previewData.message);
+                            console.warn("BG: API failed to return template preview data:", previewApiResponse.message);
+                            chrome.tabs.sendMessage(tabIdToRecord, { action: "setTemplatePreview", error: previewApiResponse.message, previewData: [] });
                         }
-                    } catch (error) {
-                        console.error("BG: Error fetching/sending template preview:", error);
                     }
-                }
-                // === END FETCH AND SEND TEMPLATE PREVIEW ===
 
-            } catch (error) {
-                console.error("BG: Final activation attempt failed:", error);
-                await setState({
-                    [STORAGE_KEYS.IS_RECORDING]: false,
-                    [STORAGE_KEYS.ACTIVE_TAB_ID]: null,
-                    [STORAGE_KEYS.CURRENT_SCENARIO_ID]: null
-                });
-                sendResponse({ status: "Status: Error Activating Content Script" });
-            }
-        });
-    })();
-    break;
+                } catch (error) { // Catch errors from trySendingActivation or fetch
+                    console.error("BG: Error in startRecording main block:", error);
+                    await setState({
+                        [STORAGE_KEYS.IS_RECORDING]: false,
+                        [STORAGE_KEYS.ACTIVE_TAB_ID]: null,
+                        [STORAGE_KEYS.CURRENT_SCENARIO_ID]: null
+                    });
+                    // Check if sendResponse has already been called by the error path in trySendingActivation
+                    // If not, send it here. However, sendResponse from the outer listener will handle it.
+                    // It's better if sendResponse is called only once.
+                    // The outer listener's sendResponse will eventually be called by the Promise rejection from this async block.
+                    // So, just re-throw to ensure the outer promise chain handles it.
+                    throw error; // This will be caught by the popup if it's waiting on a response.
+                                 // But for this structure, sendResponse is called directly to popup.
+                                 // Let's ensure sendResponse is called if not already.
+                                 // The way the switch statement is, this error will be caught by the global listener,
+                                 // but the original sendResponse to the popup might not have been called.
+                                 // Better to handle sendResponse in the main listener's catch for this action.
+                                 // For now, this error will propagate, and the popup might see a generic error.
+                }
+            })(); // Execute async IIFE
+            break; // Break for startRecording
 
 
         case "stopRecording":

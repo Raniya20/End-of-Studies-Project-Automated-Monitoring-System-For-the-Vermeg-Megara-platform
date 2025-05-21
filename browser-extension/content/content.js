@@ -4,7 +4,15 @@ console.log("CONTENT.JS: SCRIPT EXECUTION STARTED");
 let isRecorderActive = false;
 let highlightedElement = null;
 let currentOverlayData = null; // Stores { targetElement, selector } for the active overlay
-let currentTemplatePreviewData = []; // Stores template preview data [[row1_cell1, row1_cell2], [row2_cell1, ...]]
+let currentTemplateInfo = {
+    previewData: [],
+    sheetName: null,
+    allSheetNames: [],
+    actualRowsInSheet: 0,
+    actualColsInSheet: 0,
+    message: null,
+    error: null
+};
 
 // --- Helper: Robust Selector Generation ---
 /**
@@ -189,13 +197,11 @@ function generateRobustSelector(element, maxDepth = 3) {
 
 
 // --- Overlay Management Functions ---
-function getOverlayElement() {
-    return document.getElementById('_megara-recorder-overlay');
-}
+function getOverlayElement() { return document.getElementById('_megara-recorder-overlay'); }
 
 function createOverlay() {
     let overlay = getOverlayElement();
-    if (overlay) return overlay; // Don't create if exists
+    if (overlay) return overlay;
 
     overlay = document.createElement('div');
     overlay.id = '_megara-recorder-overlay';
@@ -208,23 +214,29 @@ function createOverlay() {
         <div>
             <label for="_mr-action-type">Action Type:</label>
             <select id="_mr-action-type">
-                <!-- Options will be populated dynamically -->
+                ${['CLICK','TYPE','SELECT','EXTRACT_TABLE','EXTRACT_ELEMENT','NAVIGATE','WAIT_FOR_SELECTOR','WAIT_FOR_TIMEOUT']
+                  .map(act => `<option value="${act}">${act}</option>`).join('')}
             </select>
         </div>
         <div class="_mr-value-section" id="_mr-value-section" style="display: none;">
              <label for="_mr-value-input" id="_mr-value-label">Value:</label>
              <textarea id="_mr-value-input" rows="2"></textarea>
         </div>
+
         <div class="_mr-mapping-section" id="_mr-mapping-section" style="display: none;">
             <label>Map Extracted Data to Template Cell (Click a cell below):</label>
+            <!-- Optional: Sheet Selector (for future enhancement) -->
+            <div class="_mr-sheet-selector-container" style="margin-bottom: 5px; display: none;">
+                 <label for="_mr-template-sheet-select" style="font-size:0.9em; margin-right:5px;">Sheet:</label>
+                 <select id="_mr-template-sheet-select" style="padding:3px; font-size:0.9em;"></select>
+            </div>
             <div id="_mr-template-preview-grid-container">
-                <table id="_mr-template-preview-grid">
-                    
-                </table>
-                <span class="text-muted _mr-no-preview" style="display:none;">No template preview available or data is empty.</span>
+                <table id="_mr-template-preview-grid"></table>
+                <div class="_mr-template-info-footer" style="font-size:0.8em; color:#555; margin-top:5px;"></div>
             </div>
             <input type="hidden" id="_mr-selected-template-cell" />
         </div>
+
         <div class="_mr-error-message" id="_mr-error-message" style="display: none;"></div>
         <div class="_mr-button-group">
             <button class="_mr-cancel-button" id="_mr-cancel-button">Cancel</button>
@@ -233,66 +245,116 @@ function createOverlay() {
     `;
     document.body.appendChild(overlay);
 
-    // Populate Action Types
-    const actionSelect = overlay.querySelector('#_mr-action-type');
-    const actionTypes = [
-        'CLICK', 'TYPE', 'SELECT', 'EXTRACT_TABLE', 'EXTRACT_ELEMENT',
-        'NAVIGATE', 'WAIT_FOR_SELECTOR', 'WAIT_FOR_TIMEOUT'
-    ];
-    actionTypes.forEach(action => {
-        const option = document.createElement('option');
-        option.value = action;
-        option.textContent = action;
-        actionSelect.appendChild(option);
-    });
-
-    // Add event listeners for the overlay's internal elements
-    actionSelect.addEventListener('change', handleActionTypeChange);
+    // Add event listeners
+    overlay.querySelector('#_mr-action-type').addEventListener('change', handleActionTypeChange);
     overlay.querySelector('#_mr-save-button').addEventListener('click', handleOverlaySave);
     overlay.querySelector('#_mr-cancel-button').addEventListener('click', hideOverlay);
+    // Add listener for sheet selector later if implemented
+    // overlay.querySelector('#_mr-template-sheet-select').addEventListener('change', handleSheetSelectionChange);
 
     return overlay;
 }
-
 // --- NEW: Function to render the template preview grid ---
-function renderTemplatePreviewGrid(previewData) {
+// --- REVISED: Function to render the template preview grid ---
+function renderTemplatePreviewGrid(templateInfo) {
+
+    console.log("CONTENT.JS: renderTemplatePreviewGrid - Rendering with templateInfo:", JSON.parse(JSON.stringify(templateInfo)));
+
     const gridTable = document.getElementById('_mr-template-preview-grid');
-    const noPreviewMessage = document.querySelector('#_mr-template-preview-grid-container ._mr-no-preview');
+    const infoFooter = document.querySelector('#_mr-template-preview-grid-container ._mr-template-info-footer');
     const selectedCellInput = document.getElementById('_mr-selected-template-cell');
+    const sheetSelectorContainer = document.querySelector('._mr-sheet-selector-container');
+    const sheetSelect = document.getElementById('_mr-template-sheet-select');
 
-    gridTable.innerHTML = ''; // Clear previous grid
-    if(selectedCellInput) selectedCellInput.value = ''; // Clear previous selection
+    // Clear previous grid and values
+    gridTable.innerHTML = '';
+    if (selectedCellInput) selectedCellInput.value = '';
+    if (infoFooter) infoFooter.textContent = '';
 
+    const previewData = templateInfo?.previewData;
+
+    // Handle sheet selector visibility and population
+    if (sheetSelectorContainer && sheetSelect && templateInfo?.allSheetNames && templateInfo.allSheetNames.length > 1) {
+        sheetSelect.innerHTML = '';
+        templateInfo.allSheetNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            if (name === templateInfo.sheetName) option.selected = true;
+            sheetSelect.appendChild(option);
+        });
+        sheetSelectorContainer.style.display = 'block';
+    } else if (sheetSelectorContainer) {
+        sheetSelectorContainer.style.display = 'none';
+    }
+
+    // Render table if preview data is available
     if (previewData && previewData.length > 0) {
-        if (noPreviewMessage) noPreviewMessage.style.display = 'none';
+        // Create and append thead with column letters
+        const anThRow = document.createElement('tr');
+        const emptyHeaderCell = document.createElement('th');
+        emptyHeaderCell.style.minWidth = '35px';
+        anThRow.appendChild(emptyHeaderCell);
 
+        if (previewData[0]) {
+            previewData[0].forEach((_, colIndex) => {
+                const colLetter = String.fromCharCode(65 + colIndex);
+                const th = document.createElement('th');
+                th.textContent = colLetter;
+                th.style.textAlign = 'center';
+                anThRow.appendChild(th);
+            });
+        }
+
+        const thead = document.createElement('thead');
+        thead.appendChild(anThRow);
+        gridTable.appendChild(thead);
+
+        // Create and append tbody with cell data
+        const tbody = document.createElement('tbody');
         previewData.forEach((rowData, rowIndex) => {
             const tr = document.createElement('tr');
-            rowData.forEach((cellData, colIndex) => {
-                const cellElement = (rowIndex === 0) ? document.createElement('th') : document.createElement('td');
-                cellElement.textContent = cellData || ""; // Ensure textContent is not null
-                const colLetter = String.fromCharCode(65 + colIndex); // 65 is 'A'
-                const cellRef = `${colLetter}${rowIndex + 1}`;
-                cellElement.dataset.cellRef = cellRef;
 
-                cellElement.addEventListener('click', function(e) {
-                    const currentlySelected = gridTable.querySelector('._mr-cell-selected');
-                    if (currentlySelected) {
-                        currentlySelected.classList.remove('_mr-cell-selected');
-                    }
+            const rowNumCell = document.createElement('th');
+            rowNumCell.textContent = rowIndex + 1;
+            rowNumCell.style.textAlign = 'center';
+            rowNumCell.style.backgroundColor = '#f0f0f0';
+            tr.appendChild(rowNumCell);
+
+            rowData.forEach((cellData, colIndex) => {
+                const td = document.createElement('td');
+                td.textContent = cellData || '';
+                const colLetter = String.fromCharCode(65 + colIndex);
+                const cellRef = `${colLetter}${rowIndex + 1}`;
+                td.dataset.cellRef = cellRef;
+                td.title = `Cell: ${cellRef}\nValue: ${cellData || ""}`;
+
+                td.addEventListener('click', function () {
+                    const currentSelected = gridTable.querySelector('._mr-cell-selected');
+                    if (currentSelected) currentSelected.classList.remove('_mr-cell-selected');
                     this.classList.add('_mr-cell-selected');
-                    if(selectedCellInput) selectedCellInput.value = this.dataset.cellRef;
+                    if (selectedCellInput) selectedCellInput.value = this.dataset.cellRef;
                     console.log("Content.JS: Template cell selected:", this.dataset.cellRef);
                 });
-                tr.appendChild(cellElement);
+
+                tr.appendChild(td);
             });
-            gridTable.appendChild(tr);
+
+            tbody.appendChild(tr);
         });
+
+        gridTable.appendChild(tbody);
+
+        // Add footer info
+        if (infoFooter) {
+            infoFooter.textContent = `Sheet: '${templateInfo.sheetName}'. Displaying ${previewData.length} of ${templateInfo.actualRowsInSheet} rows, ${previewData[0] ? previewData[0].length : 0} of ${templateInfo.actualColsInSheet} columns.`;
+        }
     } else {
-        if (noPreviewMessage) noPreviewMessage.style.display = 'inline';
-        console.log("Content.JS: No preview data to render or preview data is empty.");
+        if (infoFooter) infoFooter.textContent = templateInfo?.message || "No template preview available or sheet is empty.";
+        console.log("Content.JS: No preview data to render.");
     }
 }
+
 
 
 function handleActionTypeChange(event) {
@@ -303,32 +365,54 @@ function handleActionTypeChange(event) {
     const mappingSection = document.getElementById('_mr-mapping-section');
 
     // Reset value input
-    valueInput.value = '';
+    if (valueInput) valueInput.value = '';
 
     // Logic for Value Section
     if (['TYPE', 'SELECT', 'NAVIGATE', 'WAIT_FOR_TIMEOUT'].includes(selectedAction)) {
-        valueLabel.textContent = 'Value / URL / Option Value / Timeout (ms):';
-        valueInput.placeholder = selectedAction === 'TYPE' ? 'Enter text...' : (selectedAction === 'NAVIGATE' ? 'http://...' : (selectedAction === 'SELECT' ? 'Option Value' : '1000'));
-        valueSection.style.display = 'block';
+        if (valueLabel) {
+            valueLabel.textContent = 'Value / URL / Option Value / Timeout (ms):';
+        }
+        if (valueInput) {
+            valueInput.placeholder = 
+                selectedAction === 'TYPE' ? 'Enter text...' :
+                selectedAction === 'NAVIGATE' ? 'http://...' :
+                selectedAction === 'SELECT' ? 'Option Value' :
+                '1000';
+        }
+        if (valueSection) valueSection.style.display = 'block';
     } else if (['EXTRACT_ELEMENT', 'EXTRACT_TABLE'].includes(selectedAction)) {
-        valueLabel.textContent = 'Label for Extracted Data (Optional):';
-        valueInput.placeholder = 'e.g., login_message, user_table';
-        valueSection.style.display = 'block';
+        if (valueLabel) {
+            valueLabel.textContent = 'Label for Extracted Data (Optional):';
+        }
+        if (valueInput) {
+            valueInput.placeholder = 'e.g., login_message, user_table';
+        }
+        if (valueSection) valueSection.style.display = 'block';
     } else if (selectedAction === 'WAIT_FOR_SELECTOR') {
-         valueLabel.textContent = 'State[:Timeout] (e.g., visible:10000):';
-         valueInput.placeholder = 'visible';
-         valueSection.style.display = 'block';
-    } else { // CLICK or others
-        valueSection.style.display = 'none';
+        if (valueLabel) {
+            valueLabel.textContent = 'State[:Timeout] (e.g., visible:10000):';
+        }
+        if (valueInput) {
+            valueInput.placeholder = 'visible';
+        }
+        if (valueSection) valueSection.style.display = 'block';
+    } else {
+        if (valueSection) valueSection.style.display = 'none';
     }
 
     // Logic for Mapping Section
-    if (['EXTRACT_ELEMENT', 'EXTRACT_TABLE'].includes(selectedAction) && currentTemplatePreviewData.length > 0) {
-        mappingSection.style.display = 'block';
+    if (
+        ['EXTRACT_ELEMENT', 'EXTRACT_TABLE'].includes(selectedAction) &&
+        typeof currentTemplateInfo !== 'undefined' &&
+        currentTemplateInfo.previewData &&
+        currentTemplateInfo.previewData.length > 0
+    ) {
+        if (mappingSection) mappingSection.style.display = 'block';
     } else {
-        mappingSection.style.display = 'none';
+        if (mappingSection) mappingSection.style.display = 'none';
     }
 }
+
 
 
 function showOverlay(targetElement, selector) {
@@ -339,17 +423,13 @@ function showOverlay(targetElement, selector) {
     const valueInput = overlay.querySelector('#_mr-value-input');
     const selectedCellInput = document.getElementById('_mr-selected-template-cell');
 
-    // Clear previous state
     if (errorDiv) { errorDiv.textContent = ''; errorDiv.style.display = 'none'; }
     if (valueInput) valueInput.value = '';
-    if (selectedCellInput) selectedCellInput.value = ''; // Clear cell selection
+    if (selectedCellInput) selectedCellInput.value = '';
 
-
-    // Populate element info
     overlay.querySelector('#_mr-element-tag').textContent = `<${targetElement.tagName.toLowerCase()}>`;
     overlay.querySelector('#_mr-element-selector').textContent = selector;
 
-    // Auto-Suggest Action Type
     let suggestedAction = 'CLICK';
     const tagName = targetElement.tagName.toLowerCase();
     const inputType = targetElement.type?.toLowerCase();
@@ -358,16 +438,14 @@ function showOverlay(targetElement, selector) {
     else if ((tagName === 'input' && ['text', 'password', 'email', 'search', 'tel', 'url', 'number'].includes(inputType)) || tagName === 'textarea') suggestedAction = 'TYPE';
     else if (tagName === 'select') suggestedAction = 'SELECT';
     else if (tagName === 'table') suggestedAction = 'EXTRACT_TABLE';
-
     actionSelect.value = suggestedAction;
 
-    // Render template preview grid (using stored data)
-    renderTemplatePreviewGrid(currentTemplatePreviewData);
+    console.log("CONTENT.JS: showOverlay - currentTemplateInfo before render:", currentTemplateInfo);
 
-    // Trigger change to update UI sections based on suggested action
-    handleActionTypeChange({ target: actionSelect });
+    renderTemplatePreviewGrid(currentTemplateInfo); // Pass the whole object
 
-    // Position and display overlay
+    handleActionTypeChange({ target: actionSelect }); // Update visibility
+
     const rect = targetElement.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
@@ -389,13 +467,12 @@ function handleOverlaySave() {
 
     const overlay = getOverlayElement();
     const actionType = overlay.querySelector('#_mr-action-type').value;
-    const valueInput = overlay.querySelector('#_mr-value-input').value.trim();
+    const valueInputText = overlay.querySelector('#_mr-value-input').value.trim(); // Use specific var name
     const selector = currentOverlayData.selector;
     const errorDiv = overlay.querySelector('#_mr-error-message');
     const mappingTargetCell = document.getElementById('_mr-selected-template-cell').value || null;
 
-
-    errorDiv.textContent = ''; errorDiv.style.display = 'none'; // Clear previous errors
+    errorDiv.textContent = ''; errorDiv.style.display = 'none';
 
     if (!actionType) { errorDiv.textContent = "Please select an Action Type."; errorDiv.style.display = 'block'; return; }
     if (!selector && !['NAVIGATE', 'WAIT_FOR_TIMEOUT'].includes(actionType) ) {
@@ -405,8 +482,8 @@ function handleOverlaySave() {
     const stepData = {
         action_type: actionType,
         selector: selector,
-        value: valueInput || null,
-        mapping_target_cell: mappingTargetCell // Send cell reference
+        value: valueInputText || null, // Use trimmed value
+        mapping_target_cell: mappingTargetCell
     };
 
     console.log("Content Script: Sending step data to background:", stepData);
@@ -419,7 +496,7 @@ function handleOverlaySave() {
 
         if (chrome.runtime.lastError || !response) {
             console.error("CS: Error sending/receiving saveStep:", chrome.runtime.lastError?.message || "No response");
-            errorDiv.textContent = `Error: ${chrome.runtime.lastError?.message || 'Communication error with background.'}`;
+            errorDiv.textContent = `Error: ${chrome.runtime.lastError?.message || 'Communication error.'}`;
             errorDiv.style.display = 'block';
         } else {
             console.log("CS: Background response for saveStep:", response);
@@ -436,10 +513,37 @@ function handleOverlaySave() {
 
 // --- Highlighting Functions ---
 function addHighlight(event) {
-    if (!isRecorderActive || !event.target || event.target.id === '_megara-recorder-overlay' || event.target.closest('#_megara-recorder-overlay')) return;
-    removeHighlight();
-    event.target.classList.add('_megara-recorder-highlight');
-    highlightedElement = event.target;
+    // If not recording, or if there's no event target,
+    // OR if the event target IS the overlay itself,
+    // OR if the event target is a DESCENDANT of the overlay, then do nothing.
+    if (!isRecorderActive ||
+        !event.target ||
+        event.target.id === '_megara-recorder-overlay' ||
+        event.target.closest('#_megara-recorder-overlay')) {
+
+        // If the mouse is currently over the overlay, ensure any
+        // highlight on the main page (from a previous mouseover) is removed.
+        // We check event.target.closest() again because the above condition could be true
+        // due to !isRecorderActive or !event.target as well.
+        if (event.target && event.target.closest && event.target.closest('#_megara-recorder-overlay')) {
+            if (highlightedElement && highlightedElement !== event.target.closest('#_megara-recorder-overlay')) {
+                // This ensures we only remove highlights from page elements, not trying to remove
+                // a highlight from the overlay itself (which it shouldn't have).
+                removeHighlight();
+            }
+        }
+        return; // Stop further processing for this event
+    }
+
+    // If we reach here, the event is on a page element and we are recording.
+    removeHighlight(); // Remove previous highlight from other page elements
+    try {
+        event.target.classList.add('_megara-recorder-highlight');
+        highlightedElement = event.target;
+    } catch (e) {
+        console.warn("Error applying highlight class:", e, "to element:", event.target);
+        highlightedElement = null; // Reset if error
+    }
 }
 function removeHighlight() {
     if (highlightedElement) {
@@ -450,16 +554,38 @@ function removeHighlight() {
 
 // --- Click Handling ---
 function handleClick(event) {
-    if (!isRecorderActive || !event.target || event.target.id === '_megara-recorder-overlay' || event.target.closest('#_megara-recorder-overlay')) {
-         return;
+    // If not recording, or if there's no event target,
+    // OR if the event target IS the overlay itself,
+    // OR if the event target is a DESCENDANT of the overlay, then do nothing.
+    if (!isRecorderActive ||
+        !event.target ||
+        event.target.id === '_megara-recorder-overlay' ||
+        event.target.closest('#_megara-recorder-overlay')) {
+
+        // If the click originated from within the overlay, do not process it as a page interaction.
+        // The overlay's own buttons (Save, Cancel) have their specific event listeners.
+        console.debug("Click inside overlay ignored by general page handleClick.");
+        return; // Stop further processing for this event
     }
-    event.preventDefault(); event.stopPropagation();
+
+    // If we reach here, the click is on a page element and we are recording.
+    event.preventDefault(); // Stop the default click action on the page
+    event.stopPropagation(); // Stop the click bubbling up on the page
+
     const targetElement = event.target;
-    removeHighlight(); // Remove highlight from element just clicked
-    console.log("Recorder Clicked:", targetElement.tagName);
+    removeHighlight(); // Remove highlight from the element just clicked on the page
+
+    console.log("Recorder Clicked on page:", targetElement.tagName, targetElement);
+
     const selector = generateRobustSelector(targetElement);
     console.log("  Generated Selector (robust):", selector);
-    if (!selector) { alert("Could not generate a reliable selector."); return; }
+
+    if (!selector) {
+        alert("Could not generate a reliable selector for the clicked element. Please try a different element or inspect manually.");
+        return; // Don't show overlay if no selector found
+    }
+
+    // Show the overlay for the user to define the step
     showOverlay(targetElement, selector);
 }
 
@@ -470,7 +596,6 @@ function addListeners() {
     document.addEventListener('mouseout', removeHighlight, true);
     document.addEventListener('click', handleClick, true);
 }
-
 function removeListeners() {
     console.log("CONTENT.JS: Removing event listeners.");
     removeHighlight();
@@ -482,7 +607,7 @@ function removeListeners() {
 // --- Message Listener & Ready Signal ---
 if (chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        console.log("CONTENT.JS: MESSAGE LISTENER - Received message:", message);
+        console.log("CONTENT.JS: MESSAGE LISTENER - Received message:", message.action);
         if (message.action === "activateRecording") {
             if (isRecorderActive) { sendResponse({ status: "Already active" }); return true; }
             isRecorderActive = true; addListeners();
@@ -493,17 +618,27 @@ if (chrome.runtime && chrome.runtime.onMessage) {
             isRecorderActive = false; removeListeners(); hideOverlay();
             console.log("CONTENT.JS: Recording DEACTIVATED.");
             sendResponse({ status: "Recording deactivated in content script" });
-        } else if (message.action === "setTemplatePreview") { // Handle new message
-            console.log("CONTENT.JS: Received template PREVIEW data:", message.previewData);
-            currentTemplatePreviewData = message.previewData || [];
-            // If overlay is already visible, re-render its grid
+        } else if (message.action === "setTemplatePreview") {
+
+            console.log("CONTENT.JS: setTemplatePreview - Full message received:", message);
+            console.log("CONTENT.JS: setTemplatePreview - message.previewData:", message.previewData);
+
+            currentTemplateInfo = { // Store all parts of the preview info
+                previewData: message.previewData || [],
+                sheetName: message.sheetName,
+                allSheetNames: message.allSheetNames || [],
+                actualRowsInSheet: message.actualRowsInSheet,
+                actualColsInSheet: message.actualColsInSheet,
+                message: message.message,
+                error: message.error
+            };
             const overlay = getOverlayElement();
-            if (overlay && overlay.style.display === 'block') {
-                renderTemplatePreviewGrid(currentTemplatePreviewData);
+            if (overlay && overlay.style.display === 'block') { // If overlay is active, refresh its grid
+                renderTemplatePreviewGrid(currentTemplateInfo);
                  const actionSelect = overlay.querySelector('#_mr-action-type');
-                 if (actionSelect) handleActionTypeChange({target: actionSelect}); // Update visibility based on new headers
+                 if (actionSelect) handleActionTypeChange({target: actionSelect});
             }
-            sendResponse({status: "Template preview received by content script"});
+            sendResponse({status: "Template preview data processed by content script"});
         } else {
             console.log("CONTENT.JS: Received unhandled message action:", message.action);
         }

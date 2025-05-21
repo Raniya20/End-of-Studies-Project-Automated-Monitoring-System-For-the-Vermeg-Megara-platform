@@ -199,28 +199,34 @@
 }
 #_mr-template-preview-grid-container {
     margin-top: 10px;
-    max-height: 200px; /* Adjust as needed */
-    overflow: auto;    /* Allow both horizontal and vertical scroll */
+    max-height: 250px; /* Increased max height */
+    max-width: 100%;   /* Ensure it doesn't overflow overlay horizontally */
+    overflow: auto;    /* Horizontal and vertical scroll */
     border: 1px solid #ccc;
-    background-color: #fdfdfd;
+    background-color: #f8f9fa; /* Slightly off-white */
+    padding: 0; /* Table will have its own padding/border */
 }
 
-#_mr-template-preview-grid { /* This will be the <table> */
+#_mr-template-preview-grid {
     border-collapse: collapse;
-    font-size: 0.85em;
-    width: 100%; /* Or set a min-width if content is narrow */
+    font-size: 0.8em; /* Smaller font for more cells */
+    /* width: 100%; /* Let table size itself or set min-width for wide tables */
+    /* table-layout: fixed; /* Optional: if you want fixed column widths */
 }
 
 #_mr-template-preview-grid th,
 #_mr-template-preview-grid td {
     border: 1px solid #ddd;
-    padding: 4px 6px;
+    padding: 3px 5px; /* Tighter padding */
     text-align: left;
-    white-space: nowrap; /* Prevent wrapping initially */
+    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* Show ... if content too long */
-    max-width: 150px; /* Limit cell width */
+    text-overflow: ellipsis;
+    min-width: 60px;  /* Minimum width for a cell */
+    max-width: 200px; /* Maximum width for a cell */
     cursor: pointer;
+    height: 20px; /* Fixed row height */
+    line-height: 20px; /* Align text vertically */
 }
 #_mr-template-preview-grid th {
     background-color: #f0f0f0;
