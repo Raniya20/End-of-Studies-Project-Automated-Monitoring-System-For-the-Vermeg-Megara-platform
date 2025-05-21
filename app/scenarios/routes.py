@@ -1,9 +1,12 @@
 # app/scenarios/routes.py
-from flask import render_template, redirect, url_for, flash, request
+from flask import (render_template, redirect, url_for, flash, request,
+                   current_app, jsonify, g, send_from_directory)
 from flask_login import login_required, current_user # Import login_required, current_user
 from app import db
 from app.scenarios import bp
-from app.models import Scenario, Consultant, ScenarioStep, ActionTypeEnum, ReportTemplate, ColumnMapping, ProcessingRule, RuleOperatorEnum
+from app.models import (Scenario, Consultant, ScenarioStep, ActionTypeEnum,
+                        ReportTemplate, ColumnMapping, ProcessingRule, RuleOperatorEnum,
+                        ExecutionLog, ExecutionStatusEnum)
 from app.scenarios.forms import CreateScenarioForm, EditScenarioForm, ScenarioStepForm, ColumnMappingForm, ProcessingRuleForm
 import os
 import openpyxl
@@ -137,8 +140,9 @@ def create_scenario():
                 megara_url=form.megara_url.data,
                 schedule_cron=form.schedule_cron.data,
                 created_by_user_id=current_user.user_id,
-                report_template_id=template_record.template_id # Link to the uploaded template
+                report_template_id=template_record.template_id, # Link to the uploaded template
                 # Other fields like enable_anomalies will default or be set later
+                custom_report_base_name=form.custom_report_base_name.data or None 
             )
             db.session.add(new_scenario)
             db.session.commit() # Commit both scenario and template
@@ -238,6 +242,7 @@ def edit_scenario(scenario_id):
             scenario.email_recipients = form.email_recipients.data
             scenario.upload_path = form.upload_path.data
             scenario.report_template_id = new_template_id # Assign new or existing template ID
+            scenario.custom_report_base_name = form.custom_report_base_name.data or None
 
             db.session.commit() # Commit all scenario changes
             flash(f'Scenario "{scenario.name}" updated successfully!', 'success')
@@ -255,6 +260,7 @@ def edit_scenario(scenario_id):
         form.enable_anomalies.data = scenario.enable_anomalies
         form.email_recipients.data = scenario.email_recipients
         form.upload_path.data = scenario.upload_path
+        form.custom_report_base_name.data = scenario.custom_report_base_name
         # Don't pre-populate file field
 
     # Pass current template info for display
@@ -816,3 +822,55 @@ def api_get_template_preview(scenario_id):
             except Exception as e_close:
                 logging.error(f"Error closing workbook during exception handling: {e_close}")
         return jsonify({"success": False, "message": f"Error reading template preview: {str(e)}"}), 500
+
+@bp.route('/logs/<int:log_id>/download_report') # Check this URL pattern
+@login_required
+def download_report(log_id): # Check this function name
+    """Serves the report file associated with an execution log for download."""
+    log_entry = db.session.get(ExecutionLog, log_id)
+
+    if not log_entry:
+        flash("Execution log not found.", "danger")
+        return redirect(request.referrer or url_for('scenarios.list_scenarios'))
+
+    scenario = log_entry.scenario
+    if not scenario or scenario.created_by_user_id != current_user.user_id:
+        flash("Permission denied to download this report.", "danger")
+        return redirect(url_for('scenarios.list_scenarios'))
+
+    report_path_str = log_entry.report_file_path
+    if not report_path_str:
+        flash("No report file associated with this execution log.", "warning")
+        return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))
+
+    # ... (Security checks for path traversal - keep these) ...
+    # ... (os.path.exists and os.path.isfile checks - keep these) ...
+    allowed_report_base_dir_instance = os.path.join(current_app.instance_path, current_app.config.get('REPORT_OUTPUT_DIR', 'generated_reports').lstrip('./').lstrip('.\\'))
+    allowed_report_base_dir_project = os.path.abspath(current_app.config.get('REPORT_OUTPUT_DIR', './generated_reports'))
+    report_abs_path = os.path.abspath(report_path_str)
+    is_in_instance_path = report_abs_path.startswith(os.path.abspath(current_app.instance_path))
+    is_in_project_report_path = report_abs_path.startswith(allowed_report_base_dir_project)
+    if not (is_in_instance_path or is_in_project_report_path):
+         if not (report_abs_path.startswith(allowed_report_base_dir_instance) or report_abs_path.startswith(allowed_report_base_dir_project)):
+            flash("Invalid report file path.", "danger")
+            logging.warning(f"Potential path traversal attempt or invalid report path for log {log_id}: {report_path_str}")
+            return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))
+    if not os.path.exists(report_abs_path) or not os.path.isfile(report_abs_path):
+        flash(f"Report file not found on server at expected location: {os.path.basename(report_path_str)}", "danger")
+        logging.error(f"Report file for log {log_id} not found at: {report_abs_path}")
+        return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))
+
+
+    try:
+        directory_path = os.path.dirname(report_abs_path)
+        file_name = os.path.basename(report_abs_path)
+        logging.info(f"Attempting to serve file: Directory='{directory_path}', Filename='{file_name}'")
+        return send_from_directory(
+            directory_path,
+            file_name,
+            as_attachment=True
+        )
+    except Exception as e:
+        flash("Error serving the report file.", "danger")
+        logging.error(f"Error serving report for log {log_id}: {e}", exc_info=True)
+        return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))

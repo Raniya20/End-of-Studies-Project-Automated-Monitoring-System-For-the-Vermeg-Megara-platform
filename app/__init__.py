@@ -53,6 +53,8 @@ def create_app(config_class=Config):
     from app.dashboard import bp as dashboard_bp
     app.register_blueprint(dashboard_bp)
 
+    from app.reports import bp as reports_bp
+    app.register_blueprint(reports_bp)
 
     # You might still need this general models import if other parts
     # of create_app or blueprints registered here need other models

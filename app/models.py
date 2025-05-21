@@ -75,6 +75,7 @@ class Scenario(db.Model):
     upload_path = db.Column(db.Text, nullable=True) # Path for report uploads
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), onupdate=datetime.utcnow)
+    custom_report_base_name = db.Column(db.String(200), nullable=True)
 
     # Foreign Keys
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('consultant.user_id'), nullable=False, index=True)

@@ -2,7 +2,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired # Import FileField and validators
 from wtforms import StringField, TextAreaField, BooleanField, SubmitField, SelectField, IntegerField
-from wtforms.validators import DataRequired, URL, Optional, NumberRange, Length # Use Optional for fields not required on edit
+from wtforms.validators import DataRequired, URL, Optional, Length, NumberRange, Regexp # Use Optional for fields not required on edit
 # Import the Enum for the dropdown choices
 from app.models import ActionTypeEnum, RuleOperatorEnum
 
@@ -27,8 +27,17 @@ class EditScenarioForm(FlaskForm):
     # --- END NEW FILE FIELD ---
     submit = SubmitField('Update Scenario')
 
-# You could also potentially create a base ScenarioForm and inherit from it
-# for both Create and Edit if they share many fields and validation rules.
+    custom_report_base_name = StringField(
+        'Custom Report Base Name (Optional)',
+        validators=[
+            Optional(),
+            Length(max=150),
+            Regexp(r'^[a-zA-Z0-9_\s-]+$',
+                   message="Report name can only contain letters, numbers, spaces, underscores, and hyphens.")
+        ],
+        description="E.g., 'Daily_Price_Check'. A timestamp will be appended automatically."
+    )
+    submit = SubmitField('Update Scenario')
 
 
 class ScenarioStepForm(FlaskForm):
@@ -134,3 +143,14 @@ class CreateScenarioForm(FlaskForm):
         description="E.g., '0 8 * * *' for daily at 8 AM. You can refine this later."
     )
     submit = SubmitField('Save & Proceed to Record Steps')
+    custom_report_base_name = StringField(
+        'Custom Report Base Name (Optional)',
+        validators=[
+            Optional(),
+            Length(max=150),
+            Regexp(r'^[a-zA-Z0-9_\s-]+$',
+                   message="Report name can only contain letters, numbers, spaces, underscores, and hyphens.")
+        ],
+        description="E.g., 'Daily_Price_Check'. A timestamp will be appended automatically."
+    )
+    submit = SubmitField('Save Scenario & Proceed to Record Steps')

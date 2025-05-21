@@ -746,18 +746,30 @@ class AutomationRunner:
             output_dir = Path(self.app.config.get('REPORT_OUTPUT_DIR', './generated_reports')) # Use app config
             output_dir.mkdir(parents=True, exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_scenario_name = "".join(c if c.isalnum() else "_" for c in self.scenario.name)
-            output_filename = f"Scenario_{self.scenario_id}_{safe_scenario_name}_{timestamp}.xlsx"
+            if self.scenario.custom_report_base_name:
+                # Sanitize the custom base name slightly
+                base_name = "".join(c if c.isalnum() or c in [' ', '_', '-'] else '_' for c in self.scenario.custom_report_base_name).strip()
+                base_name = base_name.replace(' ', '_') # Replace spaces with underscores
+                if not base_name: # If custom name becomes empty after sanitizing, use scenario name
+                    base_name = "".join(c if c.isalnum() else "_" for c in self.scenario.name)
+            else:
+                # Default to scenario name if no custom base name
+                base_name = "".join(c if c.isalnum() else "_" for c in self.scenario.name)
+            # --- END CUSTOM BASE NAME ---
+
+            output_filename = f"{base_name}_{timestamp}.xlsx" # Construct final filename
             output_path = output_dir / output_filename
             output_path_str = str(output_path.resolve())
 
-            workbook.save(output_path)
-            logging.info(f"Report saved successfully to: {output_path_str}")
-
-            # Update ExecutionLog with the report path
-            if self.log_entry:
-                self.log_entry.report_file_path = output_path_str
-                # The final commit happens in _teardown, so this will be saved.
+            try:
+                workbook.save(output_path) # 'workbook' is from previous openpyxl logic
+                logging.info(f"Report saved successfully to: {output_path_str}")
+                if self.log_entry:
+                    self.log_entry.report_file_path = output_path_str
+            except Exception as e:
+                logging.error(f"Error saving report to {output_path_str}: {e}", exc_info=True)
+                if self.log_entry:
+                    self.log_entry.log_message = (self.log_entry.log_message or "") + f"\nERROR: Report saving failed: {e}"
 
         except Exception as e:
             logging.error(f"Error generating report: {e}", exc_info=True)
