@@ -1,46 +1,101 @@
-{% extends "base.html" %}
+{% extends "base_authenticated.html" %}
 
 {% block content %}
-    <h1>Monitoring Scenarios</h1>
-    <a href="{{ url_for('scenarios.create_scenario') }}" class="btn btn-primary mb-3">Create New Scenario</a>
+<div class="table-page-container">
 
-    {% if scenarios %}
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Target URL</th>
-                    <th>Schedule</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for scenario in scenarios %}
-                    <tr>
-                        <td>
-                            <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}">
-                                {{ scenario.name }}
-                            </a>
-                        </td>
-                        <td>{{ scenario.megara_url }}</td>
-                        <td>{{ scenario.schedule_cron }}</td>
-                        <td>{{ scenario.created_at.strftime('%Y-%m-%d %H:%M') if scenario.created_at else 'N/A' }}</td>
-                        <td>
-                            <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-sm btn-info">View</a>
-                            <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-sm btn-secondary">Edit</a>
-                            {# Delete Button Form #}
-                            <form action="{{ url_for('scenarios.delete_scenario', scenario_id=scenario.scenario_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete scenario \'{{ scenario.name }}\' and all its data?');">
-                                 {# Add CSRF token if using Flask-WTF globally later, or handle separately #}
-                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}"/> {# Basic CSRF needs setup #}
-                                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No scenarios found. Create one!</p>
-    {% endif %}
+    {# --- Page Header: Title, Search, Add Button --- #}
+    <div class="row mb-3 align-items-center page-controls-header">
+        <div class="col-md-4">
+            <h2 class="page-main-title mb-0">My Monitoring Scenarios</h2>
+        </div>
+        <div class="col-md-6 col-lg-7">
+            <form method="GET" action="{{ url_for('scenarios.list_scenarios') }}" class="d-flex justify-content-md-end align-items-center table-controls-group">
+                <div class="search-input-container me-2"> {# Wrapper for input and icon #}
+                    <input type="search" name="search" class="form-control form-control-sm table-search-input-with-icon" placeholder="Search scenarios..." value="{{ search_term or '' }}">
+                    <i class="fas fa-search search-icon-inside"></i> {# Icon for inside #}
+                </div>
+                <a href="{{ url_for('scenarios.create_scenario') }}" class="btn btn-primary-custom btn-sm flex-shrink-0">
+                    <i class="fas fa-plus me-1"></i> Add Scenario
+                </a>
+            </form>
+        </div>
+    </div>
+    {# --- End Page Header --- #}
+
+
+    <div class="card table-card shadow-sm">
+        {# The card-header can now be removed if all controls are above, or kept for other things like "Columns" button #}
+        {#
+        <div class="card-header table-card-header">
+            <div class="row align-items-center">
+                <div class="col-md-12 text-md-end">
+                     Placeholder for "Columns" dropdown or other table actions
+                     <button class="btn btn-sm btn-outline-secondary me-2"><i class="fas fa-columns"></i> Columns</button>
+                </div>
+            </div>
+        </div>
+        #}
+        <div class="card-body p-0">
+            {% if scenarios %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-custom mb-0">
+                        {# ... (thead and tbody for scenarios as before) ... #}
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 35%;">Name <i class="fas fa-sort ms-1 text-muted"></i></th>
+                                <th style="width: 30%;">Target URL <i class="fas fa-sort ms-1 text-muted"></i></th>
+                                <th style="width: 15%;">Schedule <i class="fas fa-sort ms-1 text-muted"></i></th>
+                                <th style="width: 10%;">Created <i class="fas fa-sort ms-1 text-muted"></i></th>
+                                <th style="width: 10%;" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for scenario in scenarios %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}" class="fw-medium text-decoration-none">
+                                            {{ scenario.name }}
+                                        </a>
+                                    </td>
+                                    <td><small class="text-muted">{{ scenario.megara_url[:60] }}{% if scenario.megara_url|length > 60 %}...{% endif %}</small></td>
+                                    <td><span class="badge bg-light text-dark border">{{ scenario.schedule_cron }}</span></td>
+                                    <td><small>{{ scenario.created_at.strftime('%Y-%m-%d') if scenario.created_at else 'N/A' }}</small></td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-icon btn-sm btn-outline-secondary me-1" title="Edit">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </a>
+                                        <form action="{{ url_for('scenarios.delete_scenario', scenario_id=scenario.scenario_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete scenario \'{{ scenario.name }}\'?');">
+                                             <button type="submit" class="btn btn-icon btn-sm btn-outline-danger" title="Delete">
+                                                 <i class="fas fa-trash-alt"></i>
+                                             </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                 <div class="text-center p-5">
+                    <p class="lead">
+                        {% if search_term %}
+                            No scenarios found matching your search for "<strong>{{ search_term }}</strong>".
+                            <a href="{{ url_for('scenarios.list_scenarios') }}">Clear Search</a>
+                        {% else %}
+                            No scenarios found.
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('scenarios.create_scenario') }}" class="btn btn-primary-custom"><i class="fas fa-plus me-1"></i> Create Your First Scenario</a>
+                </div>
+            {% endif %}
+        </div> {# End card-body #}
+
+        {# --- Pagination (keep as before) --- #}
+        {% if pagination and (pagination.has_prev or pagination.has_next or pagination.pages > 1) %}
+        <div class="card-footer table-card-footer bg-light">
+            {# ... (pagination HTML as before) ... #}
+        </div>
+        {% endif %}
+    </div> {# End table-card #}
+</div>
 {% endblock %}

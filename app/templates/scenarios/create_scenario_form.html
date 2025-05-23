@@ -1,51 +1,76 @@
 {# app/templates/scenarios/create_scenario_form.html #}
-{% extends "base.html" %}
+{% extends "base_authenticated.html" %}
 
 {% block content %}
-    <h1>Create New Monitoring Scenario</h1>
-    <p class="text-muted">Fill in the basic details for your new monitoring scenario. After saving, you'll be guided to record the automation steps using the browser extension.</p>
-    <hr>
+<div class="form-page-container"> {# Outer container for centering and max-width #}
+    {# Title outside the card for the distinct look #}
+    <h2 class="text-center form-page-title mb-4">{{ title }}</h2>
 
-    <form method="POST" novalidate enctype="multipart/form-data"> {# enctype is crucial #}
-        {{ form.hidden_tag() }} {# CSRF token #}
+    <div class="card form-card-compact shadow-sm"> {# New class for compact card #}
+        <div class="card-body">
+            {# Optional: Sub-description inside the card if needed #}
+            {# <p class="text-muted text-center mb-4">Fill in the details for your new monitoring scenario.</p> #}
 
-        <div class="mb-3">
-            {{ form.name.label(class="form-label") }} <span class="text-danger">*</span>
-            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), required=True) }}
-            <div class="form-text">{{ form.name.description }}</div>
-            {% for error in form.name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            <form method="POST" novalidate enctype="multipart/form-data">
+                {{ form.hidden_tag() }} {# CSRF token #}
+
+                {# Group fields logically if desired, or just list them #}
+                <div class="row">
+                    <div class="col-md-6 form-group-custom mb-3">
+                        {{ form.name.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.name(class="form-control-custom" + (" is-invalid" if form.name.errors else ""), placeholder="e.g., Daily Price Monitoring") }}
+                        {% for error in form.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 form-group-custom mb-3">
+                        {{ form.megara_url.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.megara_url(class="form-control-custom" + (" is-invalid" if form.megara_url.errors else ""), placeholder="https://app.example.com") }}
+                        {% for error in form.megara_url.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-group-custom mb-3">
+                    {{ form.template_file.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                    {{ form.template_file(class="form-control-custom form-control-file-custom" + (" is-invalid" if form.template_file.errors else "")) }}
+                    {% if form.template_file.description %}<div class="form-text-custom">{{ form.template_file.description }}</div>{% endif %}
+                    {% for error in form.template_file.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-custom mb-3">
+                        {{ form.schedule_cron.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.schedule_cron(class="form-control-custom" + (" is-invalid" if form.schedule_cron.errors else ""), placeholder="0 8 * * *") }}
+                         {% if form.schedule_cron.description %}<div class="form-text-custom">{{ form.schedule_cron.description }} See <a href="https://crontab.guru/" target="_blank">crontab.guru</a>.</div>{% endif %}
+                        {% for error in form.schedule_cron.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6 form-group-custom mb-3">
+                        {{ form.custom_report_base_name.label(class="form-label-custom") }}
+                        {{ form.custom_report_base_name(class="form-control-custom" + (" is-invalid" if form.custom_report_base_name.errors else ""), placeholder="e.g., Price_Report (Optional)") }}
+                        {% if form.custom_report_base_name.description %}<div class="form-text-custom">{{ form.custom_report_base_name.description }}</div>{% endif %}
+                        {% for error in form.custom_report_base_name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                {# --- Include other fields similarly for EditScenarioForm --- #}
+                {% if 'Edit' in title %}
+                    <div class="form-check-custom mb-3">
+                        {{ form.enable_anomalies(class="form-check-input-custom") }}
+                        {{ form.enable_anomalies.label(class="form-check-label-custom") }}
+                        {% for error in form.enable_anomalies.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="form-group-custom mb-3">
+                        {{ form.email_recipients.label(class="form-label-custom") }}
+                        {{ form.email_recipients(class="form-control-custom" + (" is-invalid" if form.email_recipients.errors else ""), rows=2, placeholder="comma,separated@emails.com") }}
+                        {% for error in form.email_recipients.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endif %}
+
+
+                <div class="form-actions-custom mt-4 pt-3 border-top">
+                    <a href="{{ url_for('scenarios.list_scenarios') }}" class="btn btn-outline-secondary me-2">Cancel</a> {# Changed class #}
+                    {{ form.submit(class="btn btn-primary-custom") }}
+                </div>
+            </form>
         </div>
-
-        <div class="mb-3">
-            {{ form.megara_url.label(class="form-label") }} <span class="text-danger">*</span>
-            {{ form.megara_url(class="form-control" + (" is-invalid" if form.megara_url.errors else ""), required=True, placeholder="https://megara.example.com/app") }}
-            <div class="form-text">{{ form.megara_url.description }}</div>
-            {% for error in form.megara_url.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-        </div>
-
-        <div class="mb-3">
-            {{ form.template_file.label(class="form-label") }} <span class="text-danger">*</span>
-            {{ form.template_file(class="form-control" + (" is-invalid" if form.template_file.errors else ""), required=True) }}
-            <div class="form-text">{{ form.template_file.description }}</div>
-            {% for error in form.template_file.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-        </div>
-
-        <div class="mb-3">
-            {{ form.schedule_cron.label(class="form-label") }} <span class="text-danger">*</span>
-            {{ form.schedule_cron(class="form-control" + (" is-invalid" if form.schedule_cron.errors else ""), required=True) }}
-            <div class="form-text">{{ form.schedule_cron.description }} See <a href="https://crontab.guru/" target="_blank">crontab.guru</a> for help.</div>
-            {% for error in form.schedule_cron.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-        </div>
-        <div class="mb-3">
-            {{ form.custom_report_base_name.label(class="form-label") }}
-            {{ form.custom_report_base_name(class="form-control" + (" is-invalid" if form.custom_report_base_name.errors else "")) }}
-            <div class="form-text">{{ form.custom_report_base_name.description }}</div>
-            {% for error in form.custom_report_base_name.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        {{ form.submit(class="btn btn-primary") }}
-        <a href="{{ url_for('scenarios.list_scenarios') }}" class="btn btn-secondary">Cancel</a>
-    </form>
+    </div>
+</div>
 {% endblock %}

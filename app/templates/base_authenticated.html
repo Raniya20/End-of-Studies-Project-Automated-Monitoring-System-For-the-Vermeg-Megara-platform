@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} - Megara Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom_layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+</head>
+<body class="authenticated-layout"> 
+    <div class="page-wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar-wrapper">
+            <div class="sidebar-brand">
+                <a href="{{ url_for('index') }}" class="brand-link-wrapper"> {# NEW WRAPPER #}
+                    <img src="{{ url_for('static', filename='icons/vermeglogo.png') }}" alt="Logo" class="brand-logo">
+                    <div class="brand-text">
+                        <span class="brand-title">Megara</span>
+                        <span class="brand-subtitle">Monitor</span>
+                    </div>
+                </a>
+                <button class="btn btn-sm sidebar-toggle-btn" id="sidebarDesktopToggle" title="Toggle sidebar">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+            </div>
+
+            <ul class="sidebar-nav">
+                <li class="sidebar-item {% if request.endpoint.startswith('scenarios.') and 'list' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('scenarios.list_scenarios') }}" class="sidebar-link">
+                        <i class="fas fa-list-alt fa-fw me-2"></i>
+                        <span>My Scenarios</span>
+                        {# <i class="fas fa-angle-right ms-auto"></i> #} 
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'scenarios.create_scenario' %}active{% endif %}">
+                    <a href="{{ url_for('scenarios.create_scenario') }}" class="sidebar-link">
+                        <i class="fas fa-plus-square fa-fw me-2"></i>
+                        <span>Add New Scenario</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint.startswith('dashboard.') %}active{% endif %}">
+                    <a href="{{ url_for('dashboard.index') }}" class="sidebar-link">
+                        <i class="fas fa-tachometer-alt fa-fw me-2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'reports.my_reports' %}active{% endif %}">
+                    <a href="{{ url_for('reports.my_reports') }}" class="sidebar-link">
+                        <i class="fas fa-file-excel fa-fw me-2"></i>
+                        <span>My Reports</span>
+                    </a>
+                </li>
+                
+            </ul>
+
+            <div class="sidebar-footer">
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-link logout-link">
+                    <i class="fas fa-sign-out-alt fa-fw me-2"></i>
+                    <span>Logout</span> 
+                </a>
+            </div>
+        </nav>
+        <!-- /#sidebar -->
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="main-content-wrapper">
+            {# Top bar for mobile toggle & User Welcome Message #}
+            <nav class="navbar main-top-bar-homogeneous"> {# Changed class #}
+                <div class="container-fluid">
+                    {# Mobile Sidebar Toggle #}
+                    <button class="btn btn-sm sidebar-toggle-btn me-2 d-lg-none" id="sidebarMobileToggle" title="Toggle Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    {# --- User Welcome Message --- #}
+                    <div class="navbar-nav top-bar-user-area"> {# New class for this area #}
+                        <span class="navbar-text welcome-message">
+                            Welcome, {{ current_user.username }}
+                        </span>
+                        {# Optional: Avatar next to welcome message #}
+                        {# <img src="{{ url_for('static', filename='images/user_avatar_placeholder.png') }}" alt="Avatar" width="32" height="32" class="rounded-circle ms-2"> #}
+                    </div>
+                    {# --- End User Welcome --- #}
+                </div>
+            </nav>
+
+            <div class="main-content-centered-container">
+                <div class="container-fluid p-4 page-content-actual">
+                    
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {# ... flash messages ... #}
+                    {% endwith %}
+
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </main>
+        <!-- /#main-content -->
+    </div><!-- /.page-wrapper -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function(event) {
+            const body = document.body; // Target the body for the class
+            const desktopToggleButton = document.getElementById('sidebarDesktopToggle');
+            const mobileToggleButton = document.getElementById('sidebarMobileToggle');
+
+            function applyInitialToggleState() {
+                if (localStorage.getItem('megaraSidebarCollapsed') === 'true') {
+                    body.classList.add('sidebar-collapsed');
+                } else {
+                    body.classList.remove('sidebar-collapsed');
+                }
+            }
+
+            function toggleSidebar() {
+                body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('megaraSidebarCollapsed', body.classList.contains('sidebar-collapsed'));
+                console.log("Sidebar toggled. Collapsed:", body.classList.contains('sidebar-collapsed')); // Debug log
+            }
+
+            if (desktopToggleButton) {
+                desktopToggleButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleSidebar();
+                });
+            }
+            if (mobileToggleButton) {
+                 mobileToggleButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleSidebar();
+                });
+            }
+
+            applyInitialToggleState(); // Apply state on load
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

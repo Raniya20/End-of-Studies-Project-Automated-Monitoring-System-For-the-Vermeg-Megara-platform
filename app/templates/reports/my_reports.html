@@ -1,116 +1,139 @@
-{% extends "base.html" %}
+{% extends "base_authenticated.html" %}
 
 {% block content %}
-    <h1>My Generated Reports</h1>
+<div class="table-page-container"> {# Consistent outer container #}
 
-    {# --- Filter Form --- #}
-    <form method="GET" action="{{ url_for('reports.my_reports') }}" class="mb-4 p-3 border rounded bg-light">
+    {# --- Page Header: Title and Filters --- #}
+    <div class="row mb-3 align-items-center page-controls-header">
+        <div class="col-md-12"> {# Title takes full width if no action button on this page #}
+            <h2 class="page-main-title mb-0">My Generated Reports</h2>
+        </div>
+    </div>
+
+    {# --- Filter Form (moved above the card) --- #}
+    <form method="GET" action="{{ url_for('reports.my_reports') }}" class="mb-4 p-3 border rounded bg-light shadow-sm filter-form">
         <div class="row g-3 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6">
                 <label for="filter_scenario_id" class="form-label form-label-sm">Scenario:</label>
-                <select name="scenario_id" id="filter_scenario_id" class="form-select form-select-sm">
-                    <option value="">-- All Scenarios --</option>
+                <select name="scenario_id" id="filter_scenario_id" class="form-select form-select-sm form-control-custom"> {# Added form-control-custom #}
+                    <option value="">-- All My Scenarios --</option>
                     {% for scenario in user_scenarios_for_filter %}
-                        <option value="{{ scenario.scenario_id }}" {% if scenario.scenario_id == filter_scenario_id %}selected{% endif %}>
+                        <option value="{{ scenario.scenario_id }}" {% if scenario.scenario_id|string == request.args.get('scenario_id')|string %}selected{% endif %}>
                             {{ scenario.name }}
                         </option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6">
                 <label for="filter_report_name" class="form-label form-label-sm">Report Name Contains:</label>
-                <input type="text" name="report_name" id="filter_report_name" class="form-control form-control-sm" value="{{ filter_report_name or '' }}">
+                <input type="text" name="report_name" id="filter_report_name" class="form-control form-control-sm form-control-custom" value="{{ filter_report_name or '' }}">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 col-sm-6">
                 <label for="filter_start_date" class="form-label form-label-sm">From Date:</label>
-                <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm" value="{{ filter_start_date or '' }}">
+                <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm form-control-custom" value="{{ filter_start_date or '' }}">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 col-sm-6">
                 <label for="filter_end_date" class="form-label form-label-sm">To Date:</label>
-                <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ filter_end_date or '' }}">
+                <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm form-control-custom" value="{{ filter_end_date or '' }}">
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+            <div class="col-md-2 col-sm-12"> {# Full width on small screens for button #}
+                <button type="submit" class="btn btn-primary-custom btn-sm w-100">Filter Reports</button>
             </div>
         </div>
     </form>
     {# --- End Filter Form --- #}
 
 
-    {% if reports %}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                {# ... (table headers and body as before) ... #}
-                 <thead>
-                    <tr>
-                        <th>Scenario Name</th>
-                        <th>Report Generated At (UTC)</th>
-                        <th>Filename</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for report_info in reports %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('scenarios.view_scenario', scenario_id=report_info.scenario_id) }}">
-                                    {{ report_info.scenario_name }}
-                                </a>
-                            </td>
-                            <td>{{ report_info.generation_time }}</td>
-                            <td>{{ report_info.filename }}</td>
-                            <td>
-                                <a href="{{ url_for('scenarios.download_report', log_id=report_info.log_id) }}" class="btn btn-sm btn-primary" target="_blank">
-                                    <i class="fas fa-download"></i> Download
-                                </a>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="card table-card shadow-sm">
+        {# Optional Card Header - Can be removed if not needed #}
+        {#
+        <div class="card-header table-card-header">
+             <h5 class="mb-0">Report List</h5>
         </div>
-
-        {# --- Pagination --- #}
-        {% if pagination and (pagination.has_prev or pagination.has_next) %}
-            <nav aria-label="Report navigation">
-                <ul class="pagination justify-content-center">
-                    {# Previous Page Link #}
-                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('reports.my_reports', page=pagination.prev_num, scenario_id=filter_scenario_id, report_name=filter_report_name, start_date=filter_start_date, end_date=filter_end_date) if pagination.has_prev else '#_my_reports' }}" aria-label="Previous">
-                            <span aria-hidden="true">«</span>
-                        </a>
-                    </li>
-                    {# Page Number Links (example for a few pages around current) #}
-                    {% for p_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                        {% if p_num %}
-                            {% if p_num == pagination.page %}
-                                <li class="page-item active" aria-current="page"><span class="page-link">{{ p_num }}</span></li>
-                            {% else %}
-                                <li class="page-item"><a class="page-link" href="{{ url_for('reports.my_reports', page=p_num, scenario_id=filter_scenario_id, report_name=filter_report_name, start_date=filter_start_date, end_date=filter_end_date) }}">{{ p_num }}</a></li>
-                            {% endif %}
+        #}
+        <div class="card-body p-0"> {# Remove padding for full-width table #}
+            {% if reports %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-custom mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Scenario Name</th>
+                                <th>Report Generated At (UTC)</th>
+                                <th>Filename</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report_info in reports %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('scenarios.view_scenario', scenario_id=report_info.scenario_id) }}" class="fw-medium text-decoration-none">
+                                            {{ report_info.scenario_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ report_info.generation_time }}</td>
+                                    <td><small>{{ report_info.filename }}</small></td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('scenarios.download_report', log_id=report_info.log_id) }}" class="btn btn-icon btn-sm btn-outline-primary" title="Download Report" target="_blank">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        {# Add other actions like "View Details" if needed #}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-5">
+                    <p class="lead">
+                        {% if request.args.get('scenario_id') or request.args.get('report_name') or request.args.get('start_date') or request.args.get('end_date') %}
+                            No reports found matching your current filter criteria.
+                            <a href="{{ url_for('reports.my_reports') }}">Clear Filters</a>
                         {% else %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                            No reports have been generated yet.
                         {% endif %}
-                    {% endfor %}
-                    {# Next Page Link #}
-                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('reports.my_reports', page=pagination.next_num, scenario_id=filter_scenario_id, report_name=filter_report_name, start_date=filter_start_date, end_date=filter_end_date) if pagination.has_next else '#_my_reports' }}" aria-label="Next">
-                            <span aria-hidden="true">»</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+                    </p>
+                </div>
+            {% endif %}
+        </div> {# End card-body #}
+
+        {# --- Pagination (keep as before) --- #}
+        {% if pagination and (pagination.has_prev or pagination.has_next or pagination.pages > 1) %}
+        <div class="card-footer table-card-footer bg-light">
+             <div class="row align-items-center">
+                <div class="col-md-6 text-muted small"> {# Adjusted columns for better balance #}
+                    Page {{ pagination.page }} of {{ pagination.pages }}. ({{ pagination.total }} total reports)
+                </div>
+                <div class="col-md-6 d-flex justify-content-md-end"> {# Adjusted columns #}
+                    <nav aria-label="Report navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            {# ... (pagination links as before, ensure filter params are included) ... #}
+                            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('reports.my_reports', page=pagination.prev_num, scenario_id=request.args.get('scenario_id'), report_name=request.args.get('report_name'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) if pagination.has_prev else '#' }}">«</a>
+                            </li>
+                            {% for p_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                                {% if p_num %}
+                                    {% if p_num == pagination.page %}
+                                        <li class="page-item active" aria-current="page"><span class="page-link">{{ p_num }}</span></li>
+                                    {% else %}
+                                        <li class="page-item"><a class="page-link" href="{{ url_for('reports.my_reports', page=p_num, scenario_id=request.args.get('scenario_id'), report_name=request.args.get('report_name'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) }}">{{ p_num }}</a></li>
+                                    {% endif %}
+                                {% elif loop.index != pagination.pages + 1 and loop.index != 1 %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('reports.my_reports', page=pagination.next_num, scenario_id=request.args.get('scenario_id'), report_name=request.args.get('report_name'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) if pagination.has_next else '#' }}">»</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
         {% endif %}
         {# --- End Pagination --- #}
 
-    {% else %}
-        <p class="mt-3">
-            {% if filter_scenario_id or filter_report_name or filter_start_date or filter_end_date %}
-                No reports found matching your current filter criteria.
-                <a href="{{ url_for('reports.my_reports') }}">Clear Filters</a>
-            {% else %}
-                No reports found for your scenarios yet.
-            {% endif %}
-        </p>
-    {% endif %}
+    </div> {# End table-card #}
+</div>
 {% endblock %}

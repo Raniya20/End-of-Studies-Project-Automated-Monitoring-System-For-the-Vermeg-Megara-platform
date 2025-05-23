@@ -1,0 +1,672 @@
+/* app/static/css/custom_layout.css */
+
+:root {
+    --sidebar-width-expanded: 250px;
+    --sidebar-width-collapsed: 70px; /* Width when collapsed (icon-only) */
+    --sidebar-bg: #ffffff;
+    --sidebar-text-color: #5a5a5a;
+    --sidebar-icon-color: #888888;
+    --sidebar-link-hover-bg: #f2f2f2;
+    --sidebar-link-hover-text: #d9534f;
+    --sidebar-link-active-bg: #f2f2f2;
+    --sidebar-link-active-text: #d10000;
+    --sidebar-link-active-icon: #d10000;
+    --main-content-bg: #f4f6f8;
+    --border-color: #e3e6f0;
+    --font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --transition-speed: 0.2s;
+    --transition-main-margin: margin-left var(--transition-speed) ease-in-out;
+    --transition-main-left: left var(--transition-speed) ease-in-out; /* For top bar left pos */
+    --transition-sidebar-width: width var(--transition-speed) ease-in-out;
+    --transition-sidebar-opacity: opacity var(--transition-speed) ease-in-out;
+    --transition-opacity-short: opacity calc(var(--transition-speed) * 0.5) ease-in-out;
+    --top-bar-height: 60px;
+}
+
+body.authenticated-layout {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family-sans-serif);
+    background-color: var(--main-content-bg);
+    overflow-x: hidden; /* Important to prevent scrollbars during transition */
+}
+
+.page-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Styles */
+.sidebar-wrapper {
+    width: var(--sidebar-width-expanded);
+    min-width: var(--sidebar-width-expanded);
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1030;
+    transition: var(--transition-sidebar-width);
+}
+
+/* Sidebar Brand/Logo Area */
+.sidebar-brand {
+    padding: 0.9rem 1rem;
+    height: var(--top-bar-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.sidebar-brand a.brand-link-wrapper {
+    color: #212529;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    flex-grow: 1;
+    margin-right: 5px;
+}
+
+.sidebar-brand .brand-logo {
+    height: 30px;
+    width: auto;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+}
+
+.sidebar-brand .brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 1;
+    transition: var(--transition-opacity-short), max-width var(--transition-speed) ease-in-out;
+    max-width: 150px;
+}
+
+.sidebar-brand .brand-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.sidebar-brand .brand-subtitle {
+    font-size: 0.7rem;
+    color: #6c757d;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.sidebar-toggle-btn {
+    color: var(--sidebar-icon-color);
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    padding: 0.25rem 0.5rem;
+    transition: transform var(--transition-speed) ease-in-out, color 0.15s ease-in-out;
+    cursor: pointer;
+    flex-shrink: 0;
+    z-index: 10;
+}
+.sidebar-toggle-btn:hover {
+    color: var(--sidebar-link-hover-text);
+}
+
+/* Sidebar Navigation List */
+.sidebar-nav {
+    list-style: none;
+    padding: 0.5rem 0;
+    margin: 0;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.sidebar-item {
+    position: relative;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    color: var(--sidebar-text-color);
+    text-decoration: none;
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, padding var(--transition-speed) ease;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar-link i.fa-fw {
+    margin-right: 0.75rem;
+    width: 1.25em;
+    text-align: center;
+    color: var(--sidebar-icon-color);
+    transition: color var(--transition-speed) ease, margin-right var(--transition-speed) ease;
+    flex-shrink: 0;
+}
+
+.sidebar-link span {
+    opacity: 1;
+    transition: var(--transition-opacity-short), max-width var(--transition-speed) ease-in-out;
+    max-width: 150px;
+    display: inline-block;
+}
+
+.sidebar-link:hover {
+    background-color: var(--sidebar-link-hover-bg);
+    color: var(--sidebar-link-hover-text);
+}
+.sidebar-link:hover i.fa-fw {
+    color: var(--sidebar-link-hover-text);
+}
+
+.sidebar-item.active > .sidebar-link {
+    background-color: var(--sidebar-link-active-bg);
+    color: var(--sidebar-link-active-text) !important;
+    font-weight: 500;
+    border-left: 4px solid var(--sidebar-link-active-text);
+    padding-left: calc(1.25rem - 4px);
+}
+.sidebar-item.active > .sidebar-link i.fa-fw {
+    color: var(--sidebar-link-active-icon) !important;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+    background-color: var(--sidebar-bg);
+    white-space: nowrap;
+    overflow: hidden;
+}
+.sidebar-footer .logout-link {
+    padding: 0.5rem 0;
+}
+.sidebar-footer .logout-link span {
+    font-size: 0.9rem;
+    opacity: 1;
+    transition: var(--transition-opacity-short), max-width var(--transition-speed) ease-in-out;
+    max-width: 150px;
+    display: inline-block;
+}
+
+/* Main Content Wrapper */
+.main-content-wrapper {
+    flex-grow: 1;
+    margin-left: var(--sidebar-width-expanded);
+    padding-top: var(--top-bar-height); /* Account for fixed top bar */
+    background-color: var(--main-content-bg);
+    transition: var(--transition-main-margin);
+    min-width: 0;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* Main Content Top Bar - Homogeneous Style */
+.main-top-bar-homogeneous {
+    height: var(--top-bar-height);
+    background-color: var(--main-content-bg); /* Match main content background */
+    border-bottom: 1px solid var(--border-color); /* Subtle separator */
+    padding: 0 1.5rem; /* Horizontal padding */
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width-expanded); /* Align with sidebar */
+    right: 0;                            /* Stretch to the right */
+    z-index: 1020; /* Below sidebar (1030) but above content scroll */
+    transition: var(--transition-main-left); /* For when sidebar collapses/expands */
+    display: flex;
+    align-items: center;
+    /* justify-content: space-between; /* If you want toggle left, user area right */
+}
+body.sidebar-collapsed .main-top-bar-homogeneous {
+    left: var(--sidebar-width-collapsed);
+}
+
+/* Mobile Toggle in Homogeneous Top Bar */
+.main-top-bar-homogeneous #sidebarMobileToggle.sidebar-toggle-btn {
+    color: var(--sidebar-icon-color); /* Or your primary text color */
+    /* Styles like border, background, font-size are inherited from .sidebar-toggle-btn */
+    /* d-lg-none is handled by Bootstrap classes in HTML */
+}
+.main-top-bar-homogeneous #sidebarMobileToggle.sidebar-toggle-btn:hover {
+    color: var(--sidebar-link-hover-text);
+}
+
+/* Page Titles in Homogeneous Top Bar */
+.main-top-bar-homogeneous .page-title-mobile { /* For mobile title next to toggle */
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--sidebar-text-color);
+    margin-left: 0.5rem;
+    /* d-lg-none is handled by Bootstrap classes in HTML */
+}
+.main-top-bar-homogeneous .page-title-main { /* For desktop title in top bar */
+    font-size: 1.2rem; /* Slightly larger or more prominent for desktop */
+    font-weight: 500;
+    color: #333; /* Darker for more emphasis */
+    /* d-none d-lg-inline-block handled by Bootstrap in HTML */
+}
+
+/* User Welcome Area in Top Bar */
+.top-bar-user-area {
+    display: flex;
+    align-items: center;
+    margin-left: auto; /* Pushes it to the right */
+}
+.top-bar-user-area .welcome-message {
+    font-size: 0.9rem;
+    color: #495057; /* Dark grey text */
+    white-space: nowrap;
+    padding: 0.5rem 0; /* Align vertically if needed */
+    margin-right: 0.75rem; /* Space before avatar or other icons */
+}
+.top-bar-user-area img.rounded-circle { /* Optional avatar styling */
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-color);
+    /* margin-left: 0.5rem; /* Space it from the text if text is to its left */
+}
+/* Placeholder for other icons in user area if needed */
+.top-bar-user-area .nav-link {
+    color: #6c757d;
+    font-size: 1.1rem;
+    padding: 0.5rem;
+    text-decoration: none;
+}
+.top-bar-user-area .nav-link:hover {
+    color: #343a40;
+}
+
+
+
+.page-main-title, /* General page title class, can be used inside .page-header-desktop or directly */
+.form-page-title { /* Specifically for form pages, if different styling needed */
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1.5rem; /* Space below the title */
+}
+
+
+/* --- Collapsed Sidebar Styles (Desktop) --- */
+body.sidebar-collapsed .sidebar-wrapper {
+    width: var(--sidebar-width-collapsed);
+    min-width: var(--sidebar-width-collapsed);
+}
+body.sidebar-collapsed .main-content-wrapper {
+    margin-left: var(--sidebar-width-collapsed);
+}
+/* .main-top-bar-homogeneous .left is handled by its own rule above */
+
+body.sidebar-collapsed .sidebar-brand .brand-text,
+body.sidebar-collapsed .sidebar-link span,
+body.sidebar-collapsed .sidebar-footer .logout-link span {
+    opacity: 0;
+    max-width: 0;
+    pointer-events: none;
+}
+
+body.sidebar-collapsed .sidebar-brand a.brand-link-wrapper {
+    justify-content: center;
+    margin-right: 0;
+}
+body.sidebar-collapsed .sidebar-brand .brand-logo {
+    margin-right: 0;
+}
+
+body.sidebar-collapsed .sidebar-brand .sidebar-toggle-btn i { /* Desktop toggle icon flip */
+    transform: rotate(180deg);
+}
+
+body.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+body.sidebar-collapsed .sidebar-item.active > .sidebar-link {
+    padding-left: calc(0.75rem - 4px);
+    padding-right: 0.75rem;
+}
+body.sidebar-collapsed .sidebar-link i.fa-fw {
+    margin-right: 0;
+    font-size: 1.1em;
+}
+
+body.sidebar-collapsed .sidebar-footer {
+    text-align: center;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+body.sidebar-collapsed .sidebar-footer .logout-link i.fa-fw {
+    margin-right: 0;
+}
+
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 991.98px) {
+    .sidebar-wrapper {
+        margin-left: calc(-1 * var(--sidebar-width-expanded));
+        box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    }
+    .main-content-wrapper {
+        margin-left: 0;
+        width: 100%;
+        padding-top: var(--top-bar-height); /* Ensure padding for fixed mobile top bar */
+    }
+    .main-top-bar-homogeneous {
+        left: 0; /* Full width on mobile */
+    }
+
+    /* When sidebar is toggled active (shown) on smaller screens
+       (using .sidebar-collapsed class on body for mobile open state) */
+    body.authenticated-layout.sidebar-collapsed .sidebar-wrapper {
+        margin-left: 0;
+        width: var(--sidebar-width-expanded);
+    }
+    body.authenticated-layout.sidebar-collapsed .main-top-bar-homogeneous {
+        left: 0; /* Top bar remains full width */
+    }
+
+    body.authenticated-layout.sidebar-collapsed .sidebar-brand .brand-text,
+    body.authenticated-layout.sidebar-collapsed .sidebar-link span,
+    body.authenticated-layout.sidebar-collapsed .sidebar-footer .logout-link span {
+        opacity: 1;
+        max-width: 150px;
+        display: inline-block;
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-brand .brand-logo {
+        margin-right: 0.75rem;
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-brand a.brand-link-wrapper {
+        justify-content: flex-start;
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-link {
+        justify-content: flex-start;
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-item.active > .sidebar-link {
+        padding-left: calc(1.25rem - 4px);
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-link i.fa-fw {
+        margin-right: 0.75rem;
+        font-size: 1em;
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-footer {
+        text-align: left;
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-footer .logout-link i.fa-fw {
+        margin-right: 0.6rem;
+    }
+    body.authenticated-layout.sidebar-collapsed .sidebar-brand .sidebar-toggle-btn i {
+        transform: rotate(0deg);
+    }
+
+    /* Toggle button visibility for mobile in top bar */
+    .sidebar-brand .sidebar-toggle-btn#sidebarDesktopToggle { display: none; }
+    .main-top-bar-homogeneous #sidebarMobileToggle.sidebar-toggle-btn {
+        /* Assuming Bootstrap .d-lg-none is on this element in HTML for hiding on large screens */
+        /* If you need to force it visible on mobile and it has .d-lg-none: */
+        display: inline-flex !important; /* Or inline-block, block, depending on .sidebar-toggle-btn base style */
+    }
+    .main-top-bar-homogeneous .page-title-mobile {
+        /* Assuming Bootstrap .d-lg-none is on this element */
+        display: inline-block !important;
+    }
+     .main-top-bar-homogeneous .page-title-main {
+        /* Assuming Bootstrap .d-none .d-lg-inline-block is on this for desktop */
+        display: none !important; /* Ensure desktop title in top bar is hidden on mobile */
+    }
+}
+
+/* Hide mobile toggles/titles on larger screens, show desktop ones */
+@media (min-width: 992px) {
+    .sidebar-brand .sidebar-toggle-btn#sidebarDesktopToggle { display: inline-flex; }
+    .main-top-bar-homogeneous #sidebarMobileToggle.sidebar-toggle-btn { display: none; } /* Hide if not using Bootstrap d-lg-none */
+    .main-top-bar-homogeneous .page-title-mobile { display: none; }  /* Hide if not using Bootstrap d-lg-none */
+    .main-top-bar-homogeneous .page-title-main { display: inline-block; } /* Show if not using Bootstrap d-none d-lg-inline-block */
+}
+
+
+/* Card styling for the table */
+.table-card {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: #fff;
+    margin-bottom: 1.5rem;
+}
+.table-card-header {
+    background-color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.table-card-header .form-control-sm {
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+}
+
+/* Custom Table Styles */
+.table-custom {
+    width: 100%;
+    font-size: 0.9rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.table-custom thead.table-light th,
+.table-custom thead th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-color);
+    border-top: none;
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    text-align: left;
+}
+.table-custom th i.fa-sort {
+    opacity: 0.4;
+    font-size: 0.8em;
+    margin-left: 0.3em;
+}
+.table-custom th:hover i.fa-sort {
+    opacity: 0.8;
+}
+
+.table-custom tbody tr:hover {
+    background-color: #f0f3f5;
+}
+.table-custom td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    border-top: 1px solid var(--border-color);
+}
+.table-custom tbody tr:first-child td {
+    border-top: none;
+}
+
+.table-custom .fw-medium {
+    font-weight: 500 !important;
+}
+.table-custom .text-decoration-none {
+    color: var(--bs-link-color, #0d6efd);
+}
+.table-custom .text-decoration-none:hover {
+    color: var(--bs-link-hover-color, #0a58ca);
+}
+
+/* Action Buttons in Table */
+.btn-icon {
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+}
+
+
+/* Table Card Footer for Pagination */
+.table-card-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-color);
+    background-color: #fff;
+}
+.table-card-footer .pagination-sm .page-link {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+.table-card-footer .small {
+    font-size: 0.8rem;
+}
+
+.table-controls-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.search-input-container {
+    position: relative;
+    max-width: 300px;
+    flex-grow: 1;
+}
+
+.table-search-input-with-icon {
+    padding-right: 2.5rem;
+    width: 100%;
+}
+
+.search-icon-inside {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+}
+
+.filter-form .form-label-sm {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+}
+.filter-form .form-select-sm,
+.filter-form .form-control-sm {
+    font-size: 0.875rem;
+}
+
+.view-page-main-title {
+    font-weight: 600;
+    color: #383f51; /* Darker title */
+    font-size: 1.6rem;
+}
+
+/* Styling for data display cards */
+.data-card {
+    border: 1px solid var(--border-color);
+    border-radius: 0.4rem; /* Slightly more rounded */
+}
+.data-card .card-header-custom {
+    background-color: #f8f9fc; /* Very light grey, almost white */
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1.25rem;
+    display: flex; /* For aligning title and buttons */
+    justify-content: space-between;
+    align-items: center;
+}
+.data-card .card-title-custom {
+    font-size: 1.05rem; /* Slightly larger than default card header h5 */
+    font-weight: 500;
+    color: #5a5c69; /* Muted title color */
+}
+
+/* Definition List styling for Scenario Details */
+.dl-custom dt {
+    font-weight: 500;
+    color: #5a5c69;
+    font-size: 0.9em;
+    padding-top: 0.5rem; /* Spacing */
+}
+.dl-custom dd {
+    margin-bottom: 0.5rem;
+    font-size: 0.9em;
+    word-break: break-all; /* Prevent long URLs/text from breaking layout */
+}
+.dl-custom dd code {
+    font-size: 0.95em;
+    padding: 0.2em 0.4em;
+    background-color: #e9ecef;
+    border-radius: 0.2rem;
+}
+
+/* Badges for status */
+.badge.bg-success-custom { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+.badge.bg-secondary-custom { background-color: #e2e3e5; color: #41464b; border: 1px solid #d3d6d8; }
+.badge.bg-info-custom { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
+.badge.bg-warning-custom { background-color: #fff3cd; color: #664d03; border: 1px solid #ffeeba; }
+.badge.bg-danger-custom { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+
+
+/* Preformatted text blocks for selectors/values in tables */
+.code-block-custom {
+    display: block; /* Make pre take full width of td */
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.8em; /* Smaller for code */
+    background-color: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.2rem;
+    max-height: 60px; /* Limit height and allow scroll if too long */
+    overflow-y: auto;
+}
+
+/* Make small icon buttons consistent */
+.btn-icon.btn-xs {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+.btn-icon.btn-xs i {
+    font-size: 0.9em;
+}
+
+/* Adjust form labels and inputs if inside these cards to be smaller */
+.data-card .form-label-custom {
+    font-size: 0.8rem; /* Even smaller for nested forms */
+    margin-bottom: 0.2rem;
+}
+.data-card .form-control-sm,
+.data-card .form-select-sm {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+.data-card .form-text-custom {
+    font-size: 0.75em;
+}
+/* Ensure add rule form is compact */
+.data-card form .row.g-2 { /* Target rows with small gutter */
+    margin-bottom: 0.5rem !important; /* Reduce space between form rows */
+}
+.data-card form .pt-4 { /* For "THEN SET" text */
+    padding-top: 1.7rem !important; /* Adjust vertical alignment */
+}
+.data-card form .align-self-end { /* For Add Rule button */
+    padding-bottom: 0; /* Align with bottom of inputs */
+}
+.text-muted_light { /* For N/A in step mapping */
+    color: #98a6ad !important;
+    font-style: italic;
+}

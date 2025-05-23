@@ -1,0 +1,139 @@
+/* app/static/css/auth_pages.css */
+body.unauthenticated-layout {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* Prevent horizontal scroll if panels are slightly off */
+}
+
+.auth-split-screen {
+    display: flex;
+    min-height: 100vh; /* Full viewport height */
+    width: 100vw;   /* Full viewport width */
+}
+
+.auth-branding-panel {
+    flex: 0 0 55%; /* Branding panel takes up 55% width, doesn't grow or shrink */
+    /* background-color: #003366; */ /* Dark blue example */
+    background: linear-gradient(to bottom right, #003366, #0055a4); /* Gradient example */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Vertically center content */
+    align-items: center;    /* Horizontally center content */
+    padding: 40px;
+    text-align: center;
+    position: relative; /* For potential absolute positioned elements inside */
+}
+
+/* If you have an image as background */
+/*
+.auth-branding-panel.with-bg-image {
+    background-image: url('../images/your-branding-image.jpg'); // Path relative to CSS file
+    background-size: cover;
+    background-position: center;
+}
+.auth-branding-panel .overlay { // Optional overlay for text readability
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 20, 40, 0.5); // Darker overlay
+    z-index: 1;
+}
+.auth-branding-panel .content-wrapper { // To ensure content is above overlay
+    position: relative;
+    z-index: 2;
+}
+*/
+
+.auth-branding-panel h1.brand-name {
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+}
+.auth-branding-panel p.tagline {
+    font-size: 1.2rem;
+    font-weight: 300;
+    max-width: 400px;
+    opacity: 0.9;
+}
+
+.auth-form-panel {
+    flex: 1; /* Form panel takes remaining space */
+    background-color: #ffffff; /* White background for form */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    overflow-y: auto; /* Allow scroll if form is long on small screens */
+}
+
+.auth-form-container {
+    width: 100%;
+    max-width: 400px; /* Max width for the form itself */
+}
+.auth-form-container h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+.auth-form-container .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #555;
+}
+.auth-form-container .form-control {
+    height: calc(1.5em + 1rem + 2px); /* Taller inputs */
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+.auth-form-container .form-check-label {
+    font-size: 0.875rem;
+    color: #555;
+}
+.auth-form-container .btn-primary {
+    background-color: var(--primary-color, #007bff); /* Use your primary color */
+    border-color: var(--primary-color, #007bff);
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    width: 100%;
+    margin-top: 1rem;
+}
+.auth-form-container .btn-primary:hover {
+    opacity: 0.9;
+}
+.auth-form-container .auth-links {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+.auth-form-container .auth-links a {
+    color: var(--link-color, #0d6efd);
+    text-decoration: none;
+}
+.auth-form-container .auth-links a:hover {
+    text-decoration: underline;
+}
+
+.alert.auth-flash-message { /* Specific styling for flash messages on auth pages */
+    max-width: 400px; /* Match form container */
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1rem;
+}
+
+
+/* Responsive: On smaller screens, stack them or hide branding panel */
+@media (max-width: 768px) {
+    .auth-branding-panel {
+        display: none; /* Hide branding panel on small screens */
+    }
+    .auth-form-panel {
+        flex-basis: 100%; /* Form takes full width */
+        padding: 20px; /* Reduce padding */
+    }
+    .auth-form-container {
+        max-width: none; /* Allow form to use more width */
+    }
+}

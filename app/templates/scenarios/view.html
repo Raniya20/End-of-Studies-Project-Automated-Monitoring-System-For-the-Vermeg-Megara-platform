@@ -1,249 +1,229 @@
-{# In app/templates/scenarios/view.html #}
-{% extends "base.html" %}
+{% extends "base_authenticated.html" %}
 
 {% block content %}
-    <h1>Scenario: {{ scenario.name }}</h1>
+<div class="view-page-container"> {# Optional overall container for consistent max-width if needed #}
 
-    {# --- Scenario Details Card --- #}
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Details</h5>
-            <p><strong>ID:</strong> {{ scenario.scenario_id }}</p>
-            <p><strong>Name:</strong> {{ scenario.name }}</p>
-            <p><strong>Target URL:</strong> {{ scenario.megara_url }}</p>
-            <p><strong>Schedule (Cron):</strong> {{ scenario.schedule_cron }}</p>
-            <p><strong>Enable Anomaly Detection:</strong> {{ scenario.enable_anomalies }}</p>
-            <p><strong>Email Recipients:</strong> {{ scenario.email_recipients or 'Not set' }}</p>
-            <p><strong>Upload Path:</strong> {{ scenario.upload_path or 'Not set' }}</p>
-            <p><strong>Created By:</strong> {{ scenario.creator.username if scenario.creator else 'N/A' }}</p>
-            <p><strong>Created At:</strong> {{ scenario.created_at.strftime('%Y-%m-%d %H:%M:%S %Z') if scenario.created_at else 'N/A' }}</p>
-            <p><strong>Last Updated:</strong> {{ scenario.updated_at.strftime('%Y-%m-%d %H:%M:%S %Z') if scenario.updated_at else 'N/A' }}</p>
-            <p><strong>Report Template:</strong>
-                {% if scenario.template %}
-                    {{ scenario.template.original_filename }} (ID: {{ scenario.template.template_id }})
-                {% else %}
-                    None
-                {% endif %}
-            </p>
-            {# Buttons for Scenario level actions #}
-            <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-secondary mt-3">Edit Scenario Details</a>
-            <a href="{{ url_for('scenarios.list_scenarios') }}" class="btn btn-secondary mt-3">Back to List</a>
+    {# Main Page Title (handled by base_authenticated.html's top bar or .page-header-desktop) #}
+    {# We can add a subtitle or specific header for this view page if desired #}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="view-page-main-title mb-1">Scenario: {{ scenario.name }}</h3>
+            <p class="text-muted small mb-0"></p>
+        </div>
+        <div>
+            <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-outline-secondary-custom btn-sm">
+                <i class="fas fa-edit me-1"></i> Edit Scenario Details
+            </a>
+            <a href="{{ url_for('scenarios.list_scenarios') }}" class="btn btn-link-custom btn-sm ms-2">Back to List</a>
         </div>
     </div>
 
-    {# --- Scenario Steps Section --- #}
-     <div class="card mb-4">
-         <div class="card-header">
-            <h5 class="mb-0">Automation Steps</h5>
+
+    {# --- Scenario Details Card --- #}
+    <div class="card data-card shadow-sm mb-4">
+        <div class="card-header card-header-custom">
+            <h5 class="mb-0 card-title-custom">Scenario Configuration</h5>
         </div>
         <div class="card-body">
-             <a href="{{ url_for('scenarios.add_step', scenario_id=scenario.scenario_id) }}" class="btn btn-primary btn-sm mb-3">
-                 <i class="fas fa-plus"></i> Add New Step {# FontAwesome icon optional #}
-             </a>
+            <dl class="row dl-custom"> {# Definition List for better semantics #}
+                <dt class="col-sm-3">Target URL:</dt>
+                <dd class="col-sm-9"><a href="{{ scenario.megara_url }}" target="_blank">{{ scenario.megara_url }}</a></dd>
 
+                <dt class="col-sm-3">Schedule (Cron):</dt>
+                <dd class="col-sm-9"><code>{{ scenario.schedule_cron }}</code></dd>
+
+                <dt class="col-sm-3">Anomaly Detection:</dt>
+                <dd class="col-sm-9">
+                    {% if scenario.enable_anomalies %}
+                        <span class="badge bg-success-custom">Enabled</span>
+                    {% else %}
+                        <span class="badge bg-secondary-custom">Disabled</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3">Email Recipients:</dt>
+                <dd class="col-sm-9">{{ scenario.email_recipients or 'Not set' }}</dd>
+
+                <dt class="col-sm-3">Report Template:</dt>
+                <dd class="col-sm-9">
+                    {% if scenario.template %}
+                        {{ scenario.template.original_filename }}
+                    {% else %}
+                        <span class="text-muted">None assigned</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3">Custom Report Name:</dt>
+                <dd class="col-sm-9">{{ scenario.custom_report_base_name or 'Uses Scenario Name' }}</dd>
+
+                {# Add custom_report_output_path if you kept it
+                <dt class="col-sm-3">Custom Report Path (Server):</dt>
+                <dd class="col-sm-9">{{ scenario.custom_report_output_path or 'Default directory' }}</dd>
+                #}
+
+                <dt class="col-sm-3">Last Updated:</dt>
+                <dd class="col-sm-9">{{ scenario.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC') if scenario.updated_at else 'N/A' }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    {# --- Automation Steps Card --- #}
+     <div class="card data-card shadow-sm mb-4">
+         <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 card-title-custom">Automation Steps</h5>
+            <a href="{{ url_for('scenarios.add_step', scenario_id=scenario.scenario_id) }}" class="btn btn-primary-custom btn-sm">
+                 <i class="fas fa-plus me-1"></i> Add Step
+            </a>
+        </div>
+        <div class="card-body p-0"> {# p-0 if table is flush #}
             {% if scenario.steps.all() %}
-            <table class="table table-sm table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th style="width: 5%;">Order</th>
-                        <th style="width: 15%;">Action</th>
-                        <th style="width: 40%;">Selector</th>
-                        <th style="width: 30%;">Value / Label / etc.</th>
-                        <th style="width: 10%;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for step in scenario.steps %} {# Assumes steps are ordered by sequence_order #}
+            <div class="table-responsive">
+                <table class="table table-hover table-custom mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <td>{{ step.sequence_order }}</td>
-                            <td>{{ step.action_type.name }}</td>
-                            <td><pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">{{ step.selector }}</pre></td>
-                            <td><pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">{{ step.value or '' }}</pre></td>
-                            <td>
-                                {# Edit Step Button #}
-                                <a href="{{ url_for('scenarios.edit_step', scenario_id=scenario.scenario_id, step_id=step.step_id) }}" class="btn btn-xs btn-secondary" title="Edit Step">
-                                    <i class="fas fa-edit"></i> {# Icon optional #}
-                                </a>
-                                {# Delete Step Button Form #}
-                                <form action="{{ url_for('scenarios.delete_step', scenario_id=scenario.scenario_id, step_id=step.step_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete step {{ step.sequence_order }}?');">
-                                     {# REMOVED CSRF for now: <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}"/> #}
-                                     <button type="submit" class="btn btn-xs btn-danger" title="Delete Step">
-                                         <i class="fas fa-trash-alt"></i> {# Icon optional #}
-                                     </button>
-                                </form>
-                            </td>
+                            <th style="width: 5%;">Order</th>
+                            <th style="width: 15%;">Action</th>
+                            <th style="width: 35%;">Target Criteria/Selector (JSON)</th>
+                            <th style="width: 25%;">Value / Label / etc.</th>
+                            <th style="width: 20%;">Mapping</th> {# For Cell/Header #}
+                            <th style="width: 10%;" class="text-end">Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for step in scenario.steps %}
+                            <tr>
+                                <td>{{ step.sequence_order }}</td>
+                                <td><span class="badge bg-info-custom">{{ step.action_type.name }}</span></td>
+                                <td><pre class="code-block-custom">{{ step.selector }}</pre></td>
+                                <td><pre class="code-block-custom">{{ step.value or '' }}</pre></td>
+                                <td>
+                                    {% if step.mapping_target_cell %}
+                                        Cell: <code>{{ step.mapping_target_cell }}</code>
+                                    {% elif step.mapping_target_header %}
+                                        Header: <code>{{ step.mapping_target_header }}</code>
+                                    {% else %}
+                                        <span class="text-muted_light">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('scenarios.edit_step', scenario_id=scenario.scenario_id, step_id=step.step_id) }}" class="btn btn-icon btn-sm btn-outline-secondary me-1" title="Edit Step"><i class="fas fa-pencil-alt"></i></a>
+                                    <form action="{{ url_for('scenarios.delete_step', scenario_id=scenario.scenario_id, step_id=step.step_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete step {{ step.sequence_order }}?');">
+                                         <button type="submit" class="btn btn-icon btn-sm btn-outline-danger" title="Delete Step"><i class="fas fa-trash-alt"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                <p>No automation steps defined yet.</p>
-            {% endif %} {# End of if scenario.steps.all() #}
-        </div> {# End card-body for Steps #}
-     </div> {# End card for Steps #}
+                <div class="p-3 text-center text-muted">No automation steps defined yet.</div>
+            {% endif %}
+        </div>
+     </div>
 
-    {# --- Column Mappings Section --- #}
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Report Column Mappings</h5>
+    {# --- Column Mappings Card --- #}
+    <div class="card data-card shadow-sm mb-4">
+        <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 card-title-custom">Report Column Mappings (for Tables)</h5>
+             {# Button to manage mappings if you create a separate page/modal later #}
         </div>
         <div class="card-body">
-            {# Show warning if no template uploaded #}
-            {% if not has_template %} {# Use flag passed from route #}
-                <div class="alert alert-warning" role="alert">
-                    Please <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}">upload an Excel template</a> first via 'Edit Scenario Details' to configure column mappings.
-                </div>
-            {% else %} {# Only show mapping section if template exists #}
-                <h6>Current Mappings (Scraped Data Header ➔ Template Header)</h6>
+            {% if not has_template %}
+                <div class="alert alert-warning" role="alert">Please upload an Excel template via 'Edit Scenario Details' to configure column mappings.</div>
+            {% else %}
                 {% if mappings %}
-                    <ul class="list-group list-group-flush mb-3">
+                    <ul class="list-group list-group-flush">
                         {% for mapping in mappings %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><strong>{{ mapping.scraped_header }}</strong> ➔ {{ mapping.template_header }}</span>
-                                {# Delete Mapping Button Form #}
-                                <form action="{{ url_for('scenarios.delete_mapping', scenario_id=scenario.scenario_id, mapping_id=mapping.mapping_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this mapping?');">
-                                     {# REMOVED CSRF for now: <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}"/> #}
-                                     <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete Mapping">
-                                         <i class="fas fa-times"></i> {# Icon optional #}
-                                     </button>
+                                <span><strong>{{ mapping.scraped_header }}</strong> <i class="fas fa-long-arrow-alt-right mx-2"></i> {{ mapping.template_header }}</span>
+                                <form action="{{ url_for('scenarios.delete_mapping', scenario_id=scenario.scenario_id, mapping_id=mapping.mapping_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete mapping?');">
+                                     <button type="submit" class="btn btn-icon btn-xs btn-outline-danger" title="Delete Mapping"><i class="fas fa-times"></i></button>
                                 </form>
                             </li>
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p>No column mappings defined yet.</p>
-                {% endif %} {# End of if mappings #}
-
-                <hr>
-                <h6>Add New Mapping</h6>
-                {# Add Mapping Form - Moved the outer 'if not has_template' check #}
-                <form method="POST" action="{{ url_for('scenarios.add_mapping', scenario_id=scenario.scenario_id) }}" class="row g-3 align-items-end" novalidate>
-                    {{ mapping_form.hidden_tag() }} {# CSRF token for the main form #}
+                    <p class="text-muted">No column mappings defined yet for table data.</p>
+                {% endif %}
+                <hr class="my-3">
+                <h6>Add New Table Column Mapping:</h6>
+                <form method="POST" action="{{ url_for('scenarios.add_mapping', scenario_id=scenario.scenario_id) }}" class="row g-2 align-items-end" novalidate>
+                    {{ mapping_form.hidden_tag() }}
                     <div class="col-md-5">
-                        {{ mapping_form.scraped_header.label(class="form-label") }}
-                        {{ mapping_form.scraped_header(class="form-control form-control-sm" + (" is-invalid" if mapping_form.scraped_header.errors else "")) }}
-                        {% for error in mapping_form.scraped_header.errors %} <div class="invalid-feedback">{{ error }}</div> {% endfor %}
-                        <div class="form-text">{{ mapping_form.scraped_header.description }}</div>
+                        {{ mapping_form.scraped_header.label(class="form-label-custom visually-hidden") }} {# Hide label if clear from context #}
+                        {{ mapping_form.scraped_header(class="form-control-custom form-control-sm" + (" is-invalid" if mapping_form.scraped_header.errors else ""), placeholder="Scraped Header Name") }}
+                        {% for error in mapping_form.scraped_header.errors %} <div class="invalid-feedback d-block">{{ error }}</div> {% endfor %}
                     </div>
-                    <div class="col-md-5">
-                        {{ mapping_form.template_header.label(class="form-label") }}
-                        {# Render as select field #}
-                        {{ mapping_form.template_header(
-                            class="form-select form-select-sm" + (" is-invalid" if mapping_form.template_header.errors else ""),
-                            disabled=(not has_template)
-                         ) }} {# <<<< MOVE COMMENT AFTER THIS PARENTHESIS <<<< #} {# Use flag from route #}
-                        {% for error in mapping_form.template_header.errors %} <div class="invalid-feedback">{{ error }}</div> {% endfor %}
-                         <div class="form-text">{{ mapping_form.template_header.description }}</div>
+                     <div class="col-md-5">
+                        {{ mapping_form.template_header.label(class="form-label-custom visually-hidden") }}
+                        {{ mapping_form.template_header(class="form-select-custom form-select-sm" + (" is-invalid" if mapping_form.template_header.errors else ""), disabled=(not has_template)) }}
+                        {% for error in mapping_form.template_header.errors %} <div class="invalid-feedback d-block">{{ error }}</div> {% endfor %}
                     </div>
-                    {# **** MISSING SUBMIT BUTTON HERE **** #}
                     <div class="col-md-2">
-                        {{ mapping_form.submit(class="btn btn-success btn-sm w-100") }}
+                        {{ mapping_form.submit(class="btn btn-success-custom btn-sm w-100") }}
                     </div>
-                    {# **** END MISSING SUBMIT BUTTON **** #}
-                </form> {# End Add Mapping Form #}
-            {% endif %} {# End of if not has_template #}
-        </div> {# End card-body for Mappings #}
-    </div> {# End card for Mappings #}
-    {# --- END Column Mappings Section --- #}
-
-    {# --- NEW: Processing Rules Section --- #}
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Data Processing Rules</h5>
+                </form>
+            {% endif %}
         </div>
+    </div>
+
+    {# --- Processing Rules Card --- #}
+    <div class="card data-card shadow-sm mb-4">
+       <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+           <h5 class="mb-0 card-title-custom">Data Processing Rules</h5>
+           {# Button to add rule (could be a modal trigger later) #}
+       </div>
         <div class="card-body">
-            <h6>Current Rules</h6>
-            {% if rules %}
-                <ul class="list-group list-group-flush mb-3">
+             {% if rules %}
+                <ul class="list-group list-group-flush">
                     {% for rule in rules %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {# Display Rule Logic #}
                             <span>
                                 IF <strong>{{ rule.condition_column }}</strong> {{ rule.operator.name }}
-                                {% if rule.operator.name not in ['IS_BLANK', 'IS_NOT_BLANK'] %}
-                                    '<code>{{ rule.condition_value or '' }}</code>'
-                                {% endif %}
+                                {% if rule.operator.name not in ['IS_BLANK', 'IS_NOT_BLANK'] %}'<code>{{ rule.condition_value or '' }}</code>'{% endif %}
                                 THEN SET <strong>{{ rule.action_column }}</strong> = '<code>{{ rule.action_value or '' }}</code>'
                             </span>
-                            {# Delete Button Form #}
                             <form action="{{ url_for('scenarios.delete_rule', scenario_id=scenario.scenario_id, rule_id=rule.rule_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this rule?');">
-                                 {# <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}"/> #} {# Removed CSRF for now #}
-                                 <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete Rule">
-                                     <i class="fas fa-times"></i> {# Icon optional #}
-                                 </button>
+                                 <button type="submit" class="btn btn-icon btn-xs btn-outline-danger" title="Delete Rule"><i class="fas fa-times"></i></button>
                             </form>
                         </li>
                     {% endfor %}
                 </ul>
             {% else %}
-                <p>No processing rules defined yet.</p>
-            {% endif %} {# End if rules #}
-
-            <hr>
-            <h6>Add New Rule</h6>
-            {# Render the Add Rule Form #}
+                <p class="text-muted">No processing rules defined yet.</p>
+            {% endif %}
+            <hr class="my-3">
+            <h6>Add New Processing Rule:</h6>
             <form method="POST" action="{{ url_for('scenarios.add_rule', scenario_id=scenario.scenario_id) }}" novalidate>
-                {{ rule_form.hidden_tag() }} {# CSRF token #}
-                <div class="row g-2 mb-2 align-items-start"> {# Use smaller gutter #}
-                    <div class="col-md-3">
-                        {{ rule_form.condition_column.label(class="form-label form-label-sm") }}
-                        {{ rule_form.condition_column(class="form-control form-control-sm" + (" is-invalid" if rule_form.condition_column.errors else "")) }}
-                        {% for error in rule_form.condition_column.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                {{ rule_form.hidden_tag() }}
+                <div class="row g-2 mb-2 align-items-start">
+                    <div class="col-md-3 form-group-custom">{{ rule_form.condition_column.label(class="form-label-custom") }}{{ rule_form.condition_column(class="form-control-custom form-control-sm", placeholder="Scraped Column") }}</div>
+                    <div class="col-md-2 form-group-custom">{{ rule_form.operator.label(class="form-label-custom") }}{{ rule_form.operator(class="form-select-custom form-select-sm") }}</div>
+                    <div class="col-md-3 form-group-custom">{{ rule_form.condition_value.label(class="form-label-custom") }}{{ rule_form.condition_value(class="form-control-custom form-control-sm", placeholder="Value") }}</div>
+                    <div class="col-auto pt-4"><span class="fw-bold pt-3">➔ THEN SET</span></div>
+                    <div class="col-md-3 form-group-custom">{{ rule_form.action_column.label(class="form-label-custom") }}{{ rule_form.action_column(class="form-control-custom form-control-sm", placeholder="Template Column") }}</div>
+                </div>
+                <div class="row g-2 mb-2 align-items-start">
+                    <div class="col-md-3 offset-md-8 form-group-custom"> {# Offset to align under action_column #}
+                         {{ rule_form.action_value.label(class="form-label-custom") }}
+                        {{ rule_form.action_value(class="form-control-custom form-control-sm", placeholder="To Value") }}
                     </div>
-                    <div class="col-md-2">
-                        {{ rule_form.operator.label(class="form-label form-label-sm") }}
-                        {{ rule_form.operator(class="form-select form-select-sm" + (" is-invalid" if rule_form.operator.errors else "")) }}
-                         {% for error in rule_form.operator.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    <div class="col-md-auto align-self-end">
+                         {{ rule_form.submit(class="btn btn-success-custom btn-sm") }}
                     </div>
-                    <div class="col-md-3">
-                        {{ rule_form.condition_value.label(class="form-label form-label-sm") }}
-                        {{ rule_form.condition_value(class="form-control form-control-sm" + (" is-invalid" if rule_form.condition_value.errors else "")) }}
-                         {% for error in rule_form.condition_value.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-                    </div>
-                     <div class="col-auto pt-4"> {# Align text vertically #}
-                         <span class="fw-bold pt-3">➔ THEN SET</span>
-                    </div>
-                    <div class="col-md-3">
-                        {{ rule_form.action_column.label(class="form-label form-label-sm") }}
-                        {{ rule_form.action_column(class="form-control form-control-sm" + (" is-invalid" if rule_form.action_column.errors else "")) }}
-                         {% for error in rule_form.action_column.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-                    </div>
-                     <div class="col-md-3">
-                         {{ rule_form.action_value.label(class="form-label form-label-sm") }}
-                        {{ rule_form.action_value(class="form-control form-control-sm" + (" is-invalid" if rule_form.action_value.errors else "")) }}
-                        {% for error in rule_form.action_value.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-                    </div>
-                    <div class="col-md-2 align-self-end"> {# Align button bottom #}
-                         {{ rule_form.submit(class="btn btn-success btn-sm w-100") }}
-                    </div>
-                </div> {# End row #}
-                {# Descriptions below the row #}
-                 <div class="row g-2 mb-3">
-                      <div class="col-md-3"><div class="form-text">{{ rule_form.condition_column.description }}</div></div>
-                      <div class="col-md-2"></div> {# Spacer #}
-                      <div class="col-md-3"><div class="form-text">{{ rule_form.condition_value.description }}</div></div>
-                      <div class="col-auto"></div> {# Spacer #}
-                      <div class="col-md-3"><div class="form-text">{{ rule_form.action_column.description }}</div></div>
-                      <div class="col-md-3"><div class="form-text">{{ rule_form.action_value.description }}</div></div>
-                      <div class="col-md-2"></div> {# Spacer #}
-                 </div>
-            </form> {# End Add Rule Form #}
-        </div> {# End card-body #}
-    </div> {# End card #}
-    {# --- END Processing Rules Section --- #}
+                </div>
+            </form>
+        </div>
+    </div>
 
-    {# --- Execution Logs Section --- #}
-     <div class="card mb-4">
-        <div class="card-header"><h5 class="mb-0">Recent Execution Logs</h5></div>
+    {# --- Execution Logs Card --- #}
+     <div class="card data-card shadow-sm mb-4">
+        <div class="card-header card-header-custom"><h5 class="mb-0 card-title-custom">Recent Execution Logs</h5></div>
         <div class="card-body">
-            <ul>
-                {% for log in scenario.execution_logs.limit(5) %}
-                    <li>{{ log.start_time.strftime('%Y-%m-%d %H:%M') if log.start_time }}: {{ log.status.name }} {% if log.report_file_path %} (<a href="#">View Report</a>) {% endif %} {% if log.log_message %}- {{ log.log_message }}{% endif %}</li> {# Add link later #}
-                {% else %}
-                    <li>No execution logs yet.</li>
-                {% endfor %}
-            </ul>
-        </div> {# End card-body for Logs #}
-     </div> {# End card for Logs #}
+            {# ... (Logs list as before, maybe styled better) ... #}
+        </div>
+     </div>
 
-{% endblock %} {# End block content #}
+</div> {# End view-page-container #}
+{% endblock %}

@@ -46,10 +46,33 @@ def get_template_headers(template_path):
 @bp.route('/list')
 @login_required # Protect this route
 def list_scenarios():
-    # Filter scenarios by the currently logged-in user
-    scenarios = Scenario.query.filter_by(created_by_user_id=current_user.user_id).order_by(Scenario.created_at.desc()).all()
-    return render_template('scenarios/list.html', title='Monitoring Scenarios', scenarios=scenarios)
+    page = request.args.get('page', 1, type=int)
+    per_page = 15 # Or get from config/user preference later
+    search_term = request.args.get('search', '').strip()
 
+    query = Scenario.query.filter_by(created_by_user_id=current_user.user_id)
+
+    if search_term:
+        # Simple search on name and URL
+        query = query.filter(
+            db.or_(
+                Scenario.name.ilike(f'%{search_term}%'),
+                Scenario.megara_url.ilike(f'%{search_term}%')
+            )
+        )
+        logging.debug(f"Searching scenarios for term: '{search_term}'")
+
+    pagination = query.order_by(Scenario.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    scenarios = pagination.items
+
+    return render_template(
+        'scenarios/list.html',
+        title='My Monitoring Scenarios',
+        scenarios=scenarios,
+        pagination=pagination,
+        # Pass search_term back to pre-fill form
+        search_term=search_term # Use this in template: value="{{ search_term or '' }}"
+    )
 @bp.route('/<int:scenario_id>')
 @login_required
 def view_scenario(scenario_id):
