@@ -1,44 +1,51 @@
 {% extends "base_unauthenticated.html" %}
 
-
 {% block content %}
 <div class="auth-split-screen">
-    <div class="auth-branding-panel">
-        {# Add your branding here - e.g., logo and tagline #}
-        <div class="content-wrapper"> {# If using image overlay #}
-            <h1 class="brand-name">Megara Monitor</h1>
-            <p class="tagline">Automated Monitoring, Simplified.</p>
-            {# You can add an <img> tag here for a logo if not using background image #}
-        </div>
-    </div>
-
+    {# Form Panel on the LEFT #}
     <div class="auth-form-panel">
         <div class="auth-form-container">
-            <h2>Sign In</h2> 
+            <img src="{{ url_for('static', filename='icons/vermeglogo.png') }}" alt="Vermeg Logo" class="form-logo">
+            <h2 class="form-title">Sign In</h2>
+            <p class="form-subtitle">Welcome back! Please sign in to your account.</p>
 
             <form method="post" novalidate>
                 {{ form.hidden_tag() }} {# CSRF token #}
+
                 <div class="form-group">
                     {{ form.username.label(class="form-label") }}
                     {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), placeholder="Your Username or Email") }}
                     {% for error in form.username.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                 </div>
+
                 <div class="form-group">
-                    {{ form.password.label(class="form-label") }}
+                    <div class="password-options">
+                        {{ form.password.label(class="form-label") }}
+                        <a href="#" class="forgot-password-link">Forgot?</a>
+                    </div>
                     {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="Password") }}
                     {% for error in form.password.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                 </div>
-                <div class="form-group form-check mb-3">
-                    {{ form.remember_me(class="form-check-input") }}
-                    {{ form.remember_me.label(class="form-check-label") }}
+
+                <div class="form-group">
+                    <div class="form-check">
+                        {{ form.remember_me(class="form-check-input") }}
+                        {{ form.remember_me.label(class="form-check-label") }}
+                    </div>
                 </div>
+                
                 {{ form.submit(class="btn btn-primary") }}
             </form>
+
             <div class="auth-links">
-                <p>New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p> 
-                {# Add Forgot Password link later if needed #}
+                New here? <a href="{{ url_for('auth.register') }}">Create an account</a>
             </div>
         </div>
+    </div>
+
+    {# Branding Panel on the RIGHT - TEXT REMOVED #}
+    <div class="auth-branding-panel">
+        {# Content (tagline) removed - only background image + overlay will show #}
     </div>
 </div>
 {% endblock %}

@@ -1,136 +1,165 @@
-/* app/static/css/custom_layout.css OR forms.css */
+/* app/static/css/forms.css */
 
-/* ... (keep :root variables and other base styles from previous steps) ... */
+/* Assuming :root variables from custom_layout.css are available */
 
 .form-page-container {
-    max-width: 800px; /* Or your desired max form width */
-    margin: 2rem auto;
-    padding: 0 15px; /* Add some padding if viewport is narrow */
-}
-
-.form-page-title {
-    font-weight: 600;
-    color: #333; /* Or your primary brand color */
-    font-size: 1.75rem; /* Or as desired */
+    max-width: 800px;
+    margin: 0 auto 2rem auto;
+    padding: 0 15px;
 }
 
 .form-card-compact {
-    border: 1px solid #e3e6f0;
-    border-radius: 0.5rem; /* More rounded than default bootstrap card */
-    background-color: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--brand-radius-md);
+    background-color: var(--brand-background-light);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
 }
 .form-card-compact .card-body {
-    padding: 1.5rem 2rem; /* Adjust padding */
+    padding: 1.5rem 2rem;
 }
-
 
 .form-label-custom {
-    font-size: 0.875rem; /* 14px */
-    font-weight: 500;
-    color: #495057;
-    margin-bottom: 0.4rem; /* Slightly more space */
+    display: block;
+    font-size: 0.85rem;
+    font-weight: var(--brand-button-font-weight); /* 500 */
+    color: var(--brand-text-dark);
+    margin-bottom: 0.4rem;
+    font-family: var(--ui-font-sans-serif);
 }
-.text-danger-emphasis { /* Ensure good contrast for asterisk */
-    color: var(--bs-danger-text-emphasis, #A71D2A);
+.text-danger-emphasis {
+    color: var(--brand-red-crimson);
 }
 
-
-/* Input fields (Text, URL, Textarea, Select, File) */
 .form-control-custom,
-.form-select-custom { /* Re-using .form-control-custom for select for consistency */
+.form-select-custom {
     display: block;
     width: 100%;
-    padding: 0.5rem 0.75rem; /* Slightly less vertical padding if too tall */
+    padding: 0.65rem 0.9rem;
     font-size: 0.9rem;
     font-weight: 400;
     line-height: 1.5;
-    color: #212529;
-    background-color: #fff;
+    color: var(--brand-text-dark);
+    background-color: var(--brand-background-light);
     background-clip: padding-box;
-    border: 1px solid #d8dde2; /* Slightly softer border */
+    border: 1px solid var(--brand-border-light);
     appearance: none;
-    border-radius: 0.3rem; /* Consistent radius */
+    border-radius: var(--brand-radius-sm);
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    font-family: var(--ui-font-sans-serif);
 }
-.form-control-custom::placeholder { color: #adb5bd; opacity: 1; }
+.form-control-custom::placeholder { color: var(--brand-text-muted); opacity: 1; }
+
 .form-control-custom:focus,
 .form-select-custom:focus {
-    color: #212529;
-    background-color: #fff;
-    border-color: #86b7fe; /* Bootstrap focus blue */
+    color: var(--brand-text-dark);
+    background-color: var(--brand-background-light);
+    border-color: var(--brand-red-accent-link);
     outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(var(--brand-red-focus-rgb), 0.25);
 }
 
-
-
-/* Select dropdown arrow (Bootstrap 5 usually handles this well) */
 .form-select-custom {
      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
      background-repeat: no-repeat;
      background-position: right 0.75rem center;
      background-size: 16px 12px;
-     padding-right: 2.5rem; /* Make space for the arrow */
+     padding-right: 2.5rem;
 }
-
 
 .form-text-custom {
     font-size: 0.8em;
-    color: #6c757d;
+    color: var(--brand-text-muted);
     margin-top: 0.25rem;
+    font-family: var(--ui-font-sans-serif);
 }
 
-/* Validation states */
 .form-control-custom.is-invalid,
 .form-select-custom.is-invalid {
-    border-color: var(--bs-danger, #dc3545);
+    border-color: var(--brand-red-crimson);
 }
 .form-control-custom.is-invalid:focus,
 .form-select-custom.is-invalid:focus {
-    border-color: var(--bs-danger, #dc3545);
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    border-color: var(--brand-red-crimson);
+    box-shadow: 0 0 0 0.2rem rgba(var(--brand-red-focus-rgb), 0.25);
 }
 .invalid-feedback.d-block {
     display: block !important;
     font-size: 0.8em;
     margin-top: 0.15rem;
+    color: var(--brand-red-crimson);
+    font-family: var(--ui-font-sans-serif);
 }
 
-/* Checkbox */
+.form-check-input-custom {
+    margin-top: 0.2em;
+    border-radius: var(--brand-radius-sm);
+    border-color: var(--brand-border-light);
+}
+.form-check-input-custom:checked {
+    background-color: var(--brand-red-crimson);
+    border-color: var(--brand-red-crimson);
+}
+.form-check-input-custom:focus {
+    border-color: var(--brand-red-accent-link);
+    box-shadow: 0 0 0 0.2rem rgba(var(--brand-red-focus-rgb), 0.25);
+}
+.form-check-label-custom {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--brand-text-dark);
+    font-family: var(--ui-font-sans-serif);
+}
 
-.form-check-input-custom { margin-top: 0.2em; } /* Align better with label */
-.form-check-label-custom { font-size: 0.9rem; font-weight: 400; }
-
-
-/* Form Actions (Buttons) */
 .form-actions-custom {
     display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    gap: 0.5rem; /* Space between buttons */
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1.5rem;
 }
-.btn-primary-custom {
-    background-color: #0d6efd; /* Example blue */
-    border-color: #0d6efd;
-    color: #fff;
-    padding: 0.45rem 1rem;
-    font-size: 0.9rem;
-    font-weight: 500;
+
+.btn-primary-custom { /* This is now consistent with .btn.btn-primary from custom_layout.css */
+    background: linear-gradient(to right, var(--brand-red-button-start), var(--brand-red-button-end));
+    border: none;
+    color: var(--brand-text-light);
+    padding: var(--brand-button-padding-y) var(--brand-button-padding-x);
+    font-size: var(--brand-button-font-size);
+    font-weight: var(--brand-button-font-weight);
+    letter-spacing: var(--brand-button-letter-spacing);
+    border-radius: var(--brand-radius-sm);
+    cursor: pointer;
+    transition: filter 0.2s ease-in-out, box-shadow 0.15s ease-in-out;
+    text-transform: none;
 }
 .btn-primary-custom:hover {
-    background-color: #0b5ed7;
-    border-color: #0a58ca;
-    color: #fff;
+    filter: brightness(110%);
+    box-shadow: 0 2px 5px rgba(var(--brand-red-overlay-rgb), 0.2);
 }
-.btn-link-custom { /* For Cancel button */
-    color: #6c757d;
+
+.btn-link-custom {
+    color: var(--brand-text-muted);
     text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    padding: 0.45rem 1rem;
+    padding: var(--brand-button-padding-y) var(--brand-button-padding-x);
+    font-size: var(--brand-button-font-size);
+    font-weight: var(--brand-button-font-weight);
+    letter-spacing: var(--brand-button-letter-spacing);
     background-color: transparent;
-    border: 1px solid transparent; /* For consistent alignment with other button */
+    border: 1px solid var(--brand-border-light);
+    border-radius: var(--brand-radius-sm);
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    text-transform: none;
 }
 .btn-link-custom:hover {
-    color: #212529;
-    text-decoration: underline;
+    color: var(--brand-red-accent-link);
+    background-color: rgba(var(--brand-red-overlay-rgb), 0.05);
+    border-color: var(--brand-red-accent-link);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    text-decoration: none;
+}
+
+/* General text elements within forms to ensure Open Sans */
+.form-card-compact p,
+.form-card-compact li,
+.form-card-compact span,
+.form-card-compact div {
+    font-family: var(--ui-font-sans-serif);
 }

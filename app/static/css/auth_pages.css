@@ -1,139 +1,249 @@
 /* app/static/css/auth_pages.css */
+
+/* --- FONTS --- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Open+Sans:wght@300;400;600;700&display=swap');
+
+:root {
+    --brand-font-serif: 'Playfair Display', serif;
+    --ui-font-sans-serif: 'Open Sans', sans-serif;
+
+    /* Red Palette - User Specified */
+    --red-panel-gradient-start: #4A0000;
+    --red-panel-gradient-end: #DC143C;
+    --red-overlay-color-rgb: 74, 0, 0;
+
+
+    --red-button-gradient-start: #6A0E0E;
+    --red-button-gradient-end: #DC143C;
+
+    --red-accent-link: #C0392B;
+    --red-accent-focus: #DC143C;
+    --red-accent-focus-rgb: 220, 20, 60;
+
+
+    --text-dark: #2c3e50;
+    --text-light: #f8f9fa;
+    --text-muted: #7f8c8d;
+    --border-color: #d1d5db;
+    --background-light: #ffffff;
+}
+
 body.unauthenticated-layout {
     margin: 0;
     padding: 0;
-    overflow-x: hidden; /* Prevent horizontal scroll if panels are slightly off */
+    overflow-x: hidden;
+    font-family: var(--ui-font-sans-serif);
+    background-color: #e9ebee;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
 }
 
 .auth-split-screen {
     display: flex;
-    min-height: 100vh; /* Full viewport height */
-    width: 100vw;   /* Full viewport width */
+    width: 90%;
+    max-width: 1200px;
+    min-height: 80vh; /* Reduced back slightly, we'll rely more on internal form compression */
+    /* Or keep at 85vh if you prefer a taller overall component */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 20px; /* This is the border we want to see */
+    overflow: hidden;
 }
 
-.auth-branding-panel {
-    flex: 0 0 55%; /* Branding panel takes up 55% width, doesn't grow or shrink */
-    /* background-color: #003366; */ /* Dark blue example */
-    background: linear-gradient(to bottom right, #003366, #0055a4); /* Gradient example */
-    color: white;
+/* --- LEFT FORM PANEL --- */
+.auth-form-panel {
+    flex: 0 0 40%;
+    background-color: var(--background-light);
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Vertically center content */
-    align-items: center;    /* Horizontally center content */
-    padding: 40px;
-    text-align: center;
-    position: relative; /* For potential absolute positioned elements inside */
-}
-
-/* If you have an image as background */
-/*
-.auth-branding-panel.with-bg-image {
-    background-image: url('../images/your-branding-image.jpg'); // Path relative to CSS file
-    background-size: cover;
-    background-position: center;
-}
-.auth-branding-panel .overlay { // Optional overlay for text readability
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 20, 40, 0.5); // Darker overlay
-    z-index: 1;
-}
-.auth-branding-panel .content-wrapper { // To ensure content is above overlay
-    position: relative;
-    z-index: 2;
-}
-*/
-
-.auth-branding-panel h1.brand-name {
-    font-size: 2.8rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    letter-spacing: 1px;
-}
-.auth-branding-panel p.tagline {
-    font-size: 1.2rem;
-    font-weight: 300;
-    max-width: 400px;
-    opacity: 0.9;
-}
-
-.auth-form-panel {
-    flex: 1; /* Form panel takes remaining space */
-    background-color: #ffffff; /* White background for form */
-    display: flex;
     justify-content: center;
     align-items: center;
-    padding: 40px;
-    overflow-y: auto; /* Allow scroll if form is long on small screens */
+    padding: 30px 30px; /* Reduced top/bottom padding */
+    box-sizing: border-box;
 }
 
 .auth-form-container {
     width: 100%;
-    max-width: 400px; /* Max width for the form itself */
+    max-width: 350px; /* Further reduced max-width */
 }
-.auth-form-container h2 {
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    color: #333;
+
+.auth-form-container .form-logo {
+    max-width: 45px;
+    margin-bottom: 15px; /* Reduced margin */
+    display: block;
 }
+
+.auth-form-container h2.form-title {
+    font-size: 1.6rem; /* Reduced further */
+    font-weight: 700;
+    margin-bottom: 0.3rem; /* Reduced margin */
+    color: var(--text-dark);
+    text-align: left;
+}
+
+.auth-form-container p.form-subtitle {
+    font-size: 0.85rem; /* Reduced further */
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem; /* Reduced margin */
+    text-align: left;
+}
+
+.form-group {
+    margin-bottom: 0.75rem; /* Significantly reduced margin between form groups */
+    text-align: left;
+}
+
 .auth-form-container .form-label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #555;
+    display: block;
+    font-size: 0.8rem; /* Reduced further */
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.2rem; /* Reduced margin */
 }
+
 .auth-form-container .form-control {
-    height: calc(1.5em + 1rem + 2px); /* Taller inputs */
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    margin-bottom: 1rem;
+    width: 100%;
+    padding: 0.6rem 0.8rem; /* Reduced further */
+    font-size: 0.9rem; /* Reduced further */
+    border: 1px solid var(--border-color);
+    border-radius: 6px; /* Slightly smaller radius */
+    box-sizing: border-box;
+    color: var(--text-dark);
+    background-color: var(--background-light);
+    line-height: 1.4; /* Adjust line height if text looks cramped */
+}
+.auth-form-container .form-control:focus {
+    border-color: var(--red-accent-focus);
+    outline: 0;
+    box-shadow: 0 0 0 0.15rem rgba(var(--red-accent-focus-rgb), 0.25); /* Smaller focus shadow */
+}
+
+.password-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.2rem; /* Reduced margin */
+}
+.password-options .form-label {
+    margin-bottom: 0;
+}
+.auth-form-container .forgot-password-link {
+    font-size: 0.75rem;
+    color: var(--red-accent-link);
+    text-decoration: none;
+    font-weight: 600;
+}
+.auth-form-container .forgot-password-link:hover {
+    text-decoration: underline;
+}
+/* For the "Remember me" checkbox specifically if it's in a .form-group */
+.form-group.form-check-group { /* Add a specific class to the remember me form group in HTML if needed */
+    margin-bottom: 0.8rem; /* Adjust spacing for checkbox group */
+}
+.auth-form-container .form-check-input {
+    margin-top: 0.1em; /* Fine-tune checkbox alignment */
 }
 .auth-form-container .form-check-label {
-    font-size: 0.875rem;
-    color: #555;
+    font-size: 0.8rem; /* Match label size */
+    font-weight: 400;
 }
+
+
 .auth-form-container .btn-primary {
-    background-color: var(--primary-color, #007bff); /* Use your primary color */
-    border-color: var(--primary-color, #007bff);
-    padding: 0.6rem 1.2rem;
-    font-size: 1rem;
+    background: linear-gradient(to right, var(--red-button-gradient-start), var(--red-button-gradient-end));
+    border: none;
+    color: white;
+    padding: 0.65rem 1.5rem; /* Reduced further */
+    font-size: 0.9rem; /* Reduced further */
+    font-weight: 600;
     width: 100%;
-    margin-top: 1rem;
+    margin-top: 1rem; /* Reduced margin */
+    border-radius: 6px; /* Match input radius */
+    cursor: pointer;
+    transition: filter 0.2s ease-in-out;
 }
+
 .auth-form-container .btn-primary:hover {
-    opacity: 0.9;
+    filter: brightness(110%);
 }
+
 .auth-form-container .auth-links {
-    margin-top: 1.5rem;
-    font-size: 0.9rem;
+    margin-top: 1.2rem; /* Reduced margin */
+    font-size: 0.8rem; /* Reduced further */
     text-align: center;
+    color: var(--text-muted);
 }
+
 .auth-form-container .auth-links a {
-    color: var(--link-color, #0d6efd);
+    color: var(--red-accent-link);
     text-decoration: none;
+    font-weight: 600;
 }
 .auth-form-container .auth-links a:hover {
     text-decoration: underline;
 }
 
-.alert.auth-flash-message { /* Specific styling for flash messages on auth pages */
-    max-width: 400px; /* Match form container */
+
+/* --- RIGHT BRANDING PANEL (IMAGE ONLY) --- */
+.auth-branding-panel {
+    flex: 0 0 60%;
+    background-image: url('../icons/Vermeg background.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-color: var(--red-panel-gradient-start);
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.auth-branding-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--red-overlay-color-rgb), 0.5);
+    z-index: 1;
+}
+
+.alert.auth-flash-message {
+    max-width: 350px;
     margin-left: auto;
     margin-right: auto;
-    margin-bottom: 1rem;
+    margin-bottom: 0.8rem; /* Reduced margin */
+    border-radius: 6px;
+    padding: 0.5rem 0.8rem; /* Smaller padding for alerts */
+    font-size: 0.8rem;
 }
 
 
-/* Responsive: On smaller screens, stack them or hide branding panel */
-@media (max-width: 768px) {
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .auth-split-screen {
+        flex-direction: column;
+        width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+    }
     .auth-branding-panel {
-        display: none; /* Hide branding panel on small screens */
+        flex-basis: auto;
+        min-height: 200px;
+        order: 1;
     }
     .auth-form-panel {
-        flex-basis: 100%; /* Form takes full width */
-        padding: 20px; /* Reduce padding */
+        flex-basis: auto;
+        padding: 25px 15px; /* Further reduced padding on mobile */
+        order: 2;
     }
     .auth-form-container {
-        max-width: none; /* Allow form to use more width */
+        max-width: 100%;
     }
+    .auth-form-container h2.form-title { font-size: 1.5rem; }
+    .auth-form-container p.form-subtitle { font-size: 0.8rem; margin-bottom: 1.2rem;}
+    .form-group { margin-bottom: 0.6rem; } /* Even tighter on mobile */
 }
