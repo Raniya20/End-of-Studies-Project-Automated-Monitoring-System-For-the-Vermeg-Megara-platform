@@ -29,7 +29,7 @@ function showLoginUI() {
     updateStatus('Needs Login', 'idle');
     loginErrorDiv.classList.add('hidden');
     loginErrorDiv.textContent = '';
-    scenarioSelect.innerHTML = '<option value="">-- Log In To Load --</option>';
+    scenarioSelect.innerHTML = '<option value=""> Log In To Load </option>';
     scenarioSelect.disabled = true;
 }
 
@@ -61,7 +61,7 @@ async function loadScenarios() {
     console.log("Popup: Requesting scenario list from background.");
     updateStatus('Loading Scenarios...', 'idle');
     scenarioSelect.disabled = true;
-    scenarioSelect.innerHTML = '<option value="">-- Loading... --</option>';
+    scenarioSelect.innerHTML = '<option value=""> Loading... --</option>';
 
     try {
         const response = await new Promise((resolve, reject) => {
@@ -79,10 +79,10 @@ async function loadScenarios() {
         if (response.success && Array.isArray(response.scenarios)) {
             console.log("[Popup] Response success. Scenario count:", response.scenarios.length);
             if (response.scenarios.length === 0) {
-                const option = document.createElement('option'); option.value = ""; option.textContent = "-- No Scenarios Found --"; scenarioSelect.appendChild(option);
+                const option = document.createElement('option'); option.value = ""; option.textContent = " No Scenarios Found "; scenarioSelect.appendChild(option);
                 updateStatus('Idle (No Scenarios)', 'idle');
             } else {
-                 const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "-- Select a Scenario --"; scenarioSelect.appendChild(defaultOption);
+                 const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = " Select a Scenario "; scenarioSelect.appendChild(defaultOption);
                 response.scenarios.forEach(scenario => {
                     console.log("[Popup] Adding scenario:", scenario);
                     const option = document.createElement('option');
@@ -97,12 +97,12 @@ async function loadScenarios() {
             const errorMsg = response.message || "Invalid response structure for scenarios.";
             console.error("[Popup] Scenario list response indicates failure:", errorMsg);
             updateStatus(`Error: ${errorMsg}`, 'error');
-            const option = document.createElement('option'); option.value = ""; option.textContent = "-- Error Parsing List --"; scenarioSelect.appendChild(option);
+            const option = document.createElement('option'); option.value = ""; option.textContent = " Error Parsing List "; scenarioSelect.appendChild(option);
         }
     } catch (error) {
         console.error("Popup: Exception in loadScenarios:", error);
         updateStatus(`Exception: ${error.message || error}`, 'error');
-        scenarioSelect.innerHTML = '<option value="">-- Error Loading --</option>';
+        scenarioSelect.innerHTML = '<option value=""> Error Loading </option>';
     }
 }
 

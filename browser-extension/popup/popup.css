@@ -1,31 +1,65 @@
 /* popup/popup.css */
+
 :root {
-    --primary-color: #007bff;
-    --secondary-color: #6c757d;
-    --success-color: #198754;
-    --danger-color: #dc3545;
-    --warning-color: #ffc107;
-    --info-color: #0dcaf0;
-    --light-color: #f8f9fa;
-    --dark-color: #212529;
-    --border-color: #dee2e6;
-    --body-bg: #fff;
-    --body-color: #212529;
-    --link-color: #0d6efd;
-    --font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --border-radius: 0.375rem;
-    --box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    --box-shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    /* --- Your Brand Palette --- */
+    --brand-font-serif: 'Playfair Display', serif; /* Not typically used in popups, but good to have */
+    --ui-font-sans-serif: 'Open Sans', sans-serif;
+
+    --brand-red-darkest: #4A0000;
+    --brand-red-button-start: #6A0E0E;
+    --brand-red-crimson: #DC143C;
+    --brand-red-button-end: #DC143C;
+    --brand-red-accent-link: #C0392B;
+    --brand-red-focus-rgb: 220, 20, 60; /* (DC143C) */
+    --brand-red-overlay-rgb: 74, 0, 0;  /* (4A0000) */
+
+    --brand-text-dark: #2c3e50;
+    --brand-text-light: #f8f9fa;
+    --brand-text-muted: #7f8c8d;
+    --brand-border-light: #d1d5db;
+    --brand-background-light: #ffffff;
+    --brand-background-page: #f4f6f8; /* Might be used for body bg if desired */
+    --brand-radius-sm: 6px;
+    --brand-radius-md: 8px;
+    --brand-radius-lg: 20px;
+
+    /* --- Popup Specific & Derived Variables --- */
+    --popup-font-family: var(--ui-font-sans-serif);
+    --popup-background: var(--brand-background-light);
+    --popup-text-color: var(--brand-text-dark);
+    --popup-border-radius: var(--brand-radius-md);
+    --popup-border-color: var(--brand-border-light);
+    --popup-focus-border-color: var(--brand-red-accent-link);
+    --popup-focus-box-shadow: 0 0 0 0.2rem rgba(var(--brand-red-focus-rgb), 0.25);
+
+    /* Semantic colors - using distinct harmonious colors for clarity */
+    --success-bg: #e6f9f0;
+    --success-border: #a3e9c2;
+    --success-text: #177245;
+
+    --danger-bg: #fdecea; /* Light red background derived from brand focus for error */
+    --danger-border: #f8c1ba;
+    --danger-text: #a02627; /* Darker red for text */
+
+    --warning-bg: #fff8e6;
+    --warning-border: #ffedb3;
+    --warning-text: #8c6d30;
+
+    --info-bg: #e6f3fc;
+    --info-border: #a0d3f5;
+    --info-text: #266799;
+
+    --light-grey-bg: #f0f2f5; /* A slightly different light grey for specific elements */
 }
 
 body {
-    font-family: var(--font-family-sans-serif);
+    font-family: var(--popup-font-family);
     font-size: 14px;
     line-height: 1.5;
-    color: var(--body-color);
-    background-color: var(--body-bg);
-    margin: 0; /* Remove default body margin */
-    width: 280px; /* Slightly wider popup */
+    color: var(--popup-text-color);
+    background-color: var(--popup-background);
+    margin: 0;
+    width: 280px; /* Or your desired popup width */
 }
 
 .container {
@@ -35,18 +69,19 @@ body {
 .popup-header {
     display: flex;
     align-items: center;
-    gap: 8px; /* Space between icon and title */
-    border-bottom: 1px solid var(--border-color);
+    gap: 8px;
+    border-bottom: 1px solid var(--popup-border-color);
     padding-bottom: 10px;
     margin-bottom: 15px;
 }
 .popup-header img {
-    flex-shrink: 0; /* Prevent icon from shrinking */
+    flex-shrink: 0;
 }
 .popup-header h3 {
     margin: 0;
     font-size: 1.1rem;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--popup-text-color);
 }
 
 .popup-section {
@@ -54,44 +89,45 @@ body {
 }
 
 .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 label {
     display: block;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
     font-size: 0.875em;
-    font-weight: 500;
-    color: #495057;
+    font-weight: 600;
+    color: var(--popup-text-color);
 }
 
 .form-control {
     box-sizing: border-box;
     display: block;
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.6rem 0.8rem;
     font-size: 0.9rem;
     font-weight: 400;
+    font-family: var(--popup-font-family);
     line-height: 1.5;
-    color: var(--body-color);
-    background-color: #fff;
+    color: var(--popup-text-color);
+    background-color: var(--brand-background-light);
     background-clip: padding-box;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--popup-border-color);
     appearance: none;
-    border-radius: var(--border-radius);
+    border-radius: var(--popup-border-radius);
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 .form-control:focus {
-    color: var(--body-color);
-    background-color: #fff;
-    border-color: #86b7fe;
+    color: var(--popup-text-color);
+    background-color: var(--brand-background-light);
+    border-color: var(--popup-focus-border-color);
     outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    box-shadow: var(--popup-focus-box-shadow);
 }
 
 select.form-control {
-     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%237f8c8d' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e"); /* using --brand-text-muted color for arrow */
      background-repeat: no-repeat;
      background-position: right 0.75rem center;
      background-size: 16px 12px;
@@ -100,25 +136,26 @@ select.form-control {
 
 hr {
     border: 0;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--popup-border-color);
     margin: 1rem 0;
 }
 
 .user-info {
     font-size: 0.9em;
-    color: var(--secondary-color);
+    color: var(--brand-text-muted);
     margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-/* Buttons */
+/* --- Buttons --- */
 .btn {
     display: inline-block;
-    font-weight: 400;
+    font-family: var(--popup-font-family);
+    font-weight: 600;
     line-height: 1.5;
-    color: var(--body-color); /* Default text color */
+    color: var(--brand-text-dark); /* Default for non-primary buttons */
     text-align: center;
     text-decoration: none;
     vertical-align: middle;
@@ -126,97 +163,110 @@ hr {
     user-select: none;
     background-color: transparent;
     border: 1px solid transparent;
-    padding: 0.375rem 0.75rem;
+    padding: 0.6rem 1rem;
     font-size: 0.9rem;
-    border-radius: var(--border-radius);
-    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    width: 100%; /* Make buttons full width by default */
-    margin-bottom: 5px; /* Space between buttons */
+    border-radius: var(--popup-border-radius);
+    transition: filter 0.2s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    width: 100%;
+    margin-bottom: 8px;
 }
 .btn:last-child {
      margin-bottom: 0;
 }
 
 .btn-primary {
-    color: #fff;
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
+    color: var(--brand-text-light);
+    background: linear-gradient(to right, var(--brand-red-button-start), var(--brand-red-button-end));
+    border: none;
 }
 .btn-primary:hover {
-    color: #fff;
-    background-color: #0b5ed7;
-    border-color: #0a58ca;
+    color: var(--brand-text-light);
+    filter: brightness(115%);
 }
 
 .btn-success {
-    color: #fff;
-    background-color: var(--success-color);
-    border-color: var(--success-color);
+    color: var(--success-text);
+    background-color: var(--success-bg);
+    border-color: var(--success-border);
 }
 .btn-success:hover {
-    color: #fff;
-    background-color: #157347;
-    border-color: #146c43;
+    filter: brightness(95%); /* Slightly darken background */
+    color: var(--success-text);
 }
 
 .btn-danger {
-    color: #fff;
-    background-color: var(--danger-color);
-    border-color: var(--danger-color);
+    color: var(--danger-text);
+    background-color: var(--danger-bg);
+    border-color: var(--danger-border);
 }
 .btn-danger:hover {
-    color: #fff;
-    background-color: #bb2d3b;
-    border-color: #b02a37;
+    filter: brightness(95%); /* Slightly darken background */
+    color: var(--danger-text);
 }
 
-/* Link button for logout */
 .btn-link {
-    font-weight: 400;
-    color: var(--link-color);
-    text-decoration: underline;
+    font-weight: 600;
+    color: var(--brand-red-accent-link);
+    text-decoration: none;
     background-color: transparent;
     border: none;
-    padding: 0; /* Remove padding */
-    width: auto; /* Override full width */
+    padding: 0;
+    width: auto;
     margin-bottom: 0;
 }
 .btn-link:hover {
-    color: #0a58ca;
+    color: var(--brand-red-darkest);
+    text-decoration: underline;
 }
 .btn-logout {
-    font-size: 0.9em; /* Make logout slightly smaller */
+    font-size: 0.9em; /* Can be a .btn-link */
 }
 
 
-/* Status Bar */
+/* --- Status Bar --- */
 .status-bar {
     font-size: 0.85em;
     text-align: center;
     margin-top: 10px;
     padding: 8px;
-    border-radius: var(--border-radius);
+    border-radius: var(--popup-border-radius);
     border: 1px solid transparent;
 }
-.status-idle { background-color: var(--light-color); border-color: #eee; color: #555;}
-.status-recording { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;} /* Use danger colors */
-.status-error { background-color: #fff3cd; border-color: #ffeeba; color: #664d03;} /* Use warning colors */
-.status-success { background-color: #d1e7dd; border-color: #badbcc; color: #0f5132;} /* Use success colors */
+.status-idle { background-color: var(--light-grey-bg); border-color: var(--popup-border-color); color: var(--brand-text-muted);}
+.status-recording { background-color: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text);}
+.status-error { background-color: var(--warning-bg); border-color: var(--warning-border); color: var(--warning-text);} /* Using warning for generic error */
+.status-success { background-color: var(--success-bg); border-color: var(--success-border); color: var(--success-text);}
 
-/* Alert for login errors */
+/* --- Alert for login errors etc. --- */
 .alert {
     position: relative;
     padding: 0.75rem 1rem;
     margin-bottom: 1rem;
     border: 1px solid transparent;
-    border-radius: var(--border-radius);
+    border-radius: var(--popup-border-radius);
     font-size: 0.9em;
 }
-.alert-error {
-    color: #842029;
-    background-color: #f8d7da;
-    border-color: #f5c2c7;
+.alert-error { /* This would be for specific login errors in the popup */
+    color: var(--danger-text);
+    background-color: var(--danger-bg);
+    border-color: var(--danger-border);
 }
+.alert-success {
+    color: var(--success-text);
+    background-color: var(--success-bg);
+    border-color: var(--success-border);
+}
+.alert-warning {
+    color: var(--warning-text);
+    background-color: var(--warning-bg);
+    border-color: var(--warning-border);
+}
+.alert-info {
+    color: var(--info-text);
+    background-color: var(--info-bg);
+    border-color: var(--info-border);
+}
+
 
 /* Utility */
 .hidden { display: none !important; }
