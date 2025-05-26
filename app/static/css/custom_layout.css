@@ -183,7 +183,7 @@ body.sidebar-collapsed .main-top-bar-homogeneous { left: var(--sidebar-width-col
 .main-top-bar-homogeneous .page-title-mobile,
 .main-top-bar-homogeneous .page-title-main { font-size: 1.15rem; font-weight: 600; color: var(--brand-text-dark); margin-left: 0.5rem; font-family: var(--ui-font-sans-serif); }
 .top-bar-user-area { display: flex; align-items: center; margin-left: auto; }
-.top-bar-user-area .welcome-message { font-size: 0.9rem; color: var(--brand-text-muted); white-space: nowrap; padding: 0.5rem 0; margin-right: 0.75rem; font-family: var(--ui-font-sans-serif); }
+.top-bar-user-area .welcome-message { font-size: 0.9rem; margin-top: -0.6rem ; color: var(--brand-text-muted); white-space: nowrap; padding: 0.5rem 0; margin-right: 0.75rem; font-family: var(--ui-font-sans-serif); }
 .top-bar-user-area img.rounded-circle { width: 32px; height: 32px; border: 1px solid var(--border-color); }
 .top-bar-user-area .nav-link { color: var(--brand-text-muted); font-size: 1.1rem; padding: 0.5rem; text-decoration: none; }
 .top-bar-user-area .nav-link:hover { color: var(--brand-red-accent-link); }
@@ -418,3 +418,59 @@ body.sidebar-collapsed .sidebar-footer .logout-link i.fa-fw {
 .btn.btn-secondary:hover, .btn.btn-light:hover { background-color: #e9ecef; border-color: #ced4da; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .btn.btn-danger { background-color: var(--brand-red-crimson); border-color: var(--brand-red-crimson); color: var(--brand-text-light); }
 .btn.btn-danger:hover { background-color: var(--brand-red-darkest); border-color: var(--brand-red-darkest); filter: brightness(90%); }
+
+.inline-icon-image {
+    width: 18px;
+    height: 18px;
+    vertical-align: text-bottom;
+    margin: 0 2px;
+}
+
+.instruction-subsection {
+    background-color: #f8f9fa; /* Or a light var(--brand-background-page) */
+    border-color: var(--brand-border-light) !important;
+    margin-left: 2.25rem; /* Align with text after main icon */
+}
+.instruction-subsection ul {
+    padding-left: 0.5rem;
+}
+
+.alert.alert-info-custom {
+    background-color: rgba(var(--brand-red-overlay-rgb), 0.05); /* Subtle brand color */
+    color: var(--brand-text-dark);
+    border: 1px solid rgba(var(--brand-red-overlay-rgb), 0.1);
+    border-left: 4px solid var(--brand-red-accent-link);
+    border-radius: var(--brand-radius-sm);
+    padding: 0.85rem 1.25rem;
+    font-family: var(--ui-font-sans-serif);
+}
+.alert.alert-info-custom strong {
+    color: var(--brand-red-darkest);
+}
+
+.icon-brand-accent {
+    color: var(--brand-red-accent-link) !important; /* !important might be needed to override Font Awesome's own potential styling or Bootstrap utilities if used directly on <i> */
+}
+
+.icon-brand-muted {
+    color: var(--brand-text-muted) !important;
+}
+
+/* Ensure your btn-outline-primary is styled correctly for its text color */
+.btn-outline-primary {
+    color: var(--brand-red-accent-link);
+    border-color: var(--brand-red-accent-link);
+}
+.btn-outline-primary:hover {
+    color: var(--brand-text-light);
+    background-color: var(--brand-red-accent-link);
+    border-color: var(--brand-red-accent-link);
+}
+.btn-outline-primary i { /* Ensures icon inside also gets this color by default */
+    color: currentColor;
+}
+
+/* Ensure your alert icon has the desired color */
+.alert.alert-info-custom i.fa-info-circle {
+    color: var(--brand-red-accent-link); /* Or another suitable alert icon color from your theme */
+}

@@ -1,44 +1,70 @@
-{# app/templates/scenarios/start_recording_guidance.html (Simplified) #}
 {% extends "base_authenticated.html" %}
 
 {% block content %}
-    <h1>{{ title }} for Scenario: {{ scenario.name }}</h1>
+    <h1 class="page-main-title text-center mb-4">
+        {{ title }} for Scenario: <span class="fw-normal" style="color: var(--brand-text-dark);">{{ scenario.name }}</span>
+    </h1>
 
-    
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Next Steps: Record Automation Sequence</h5>
-            <p>Please follow these instructions to record the interaction steps for this scenario:</p>
-            <ol>
-                <li>
-                    Open the target application in a new browser tab:
-                    <a href="{{ scenario.megara_url }}" target="_blank" class="btn btn-outline-primary btn-sm ms-2">
-                        Open {{ scenario.name }} Application <i class="fas fa-external-link-alt"></i>
+    <div class="form-page-container">
+        <div class="card form-card-compact shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title-custom mb-3">Next Steps: Record Automation Sequence</h5>
+                <p class="text-muted">Please follow these instructions carefully to record the interaction steps for this scenario:</p>
+
+                <ol class="mb-4">
+                    <li class="mb-3">
+                        <i class="fas fa-external-link-alt fa-fw me-2 align-middle icon-brand-accent"></i>
+                        Open the target application in a new browser tab:
+                        <a href="{{ scenario.megara_url }}" target="_blank" class="btn btn-outline-primary btn-sm ms-2">
+                            Open {{ scenario.name }} <i class="fas fa-external-link-alt ms-1"></i>
+                        </a>
+                        <small class="d-block mt-1 text-muted" style="margin-left: 2.25rem;">This will open in a new tab for recording.</small>
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-mouse-pointer fa-fw me-2 align-middle icon-brand-accent"></i>
+                        Once the application page is fully loaded, click the <b>Megara Recorder</b> icon <img src="{{ url_for('static', filename='icons/icon48.png') }}" alt="Ext Icon" class="inline-icon-image"> in your browser's toolbar.
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-list-ul fa-fw me-2 align-middle icon-brand-accent"></i>
+                        In the extension popup:
+                        <div class="instruction-subsection mt-2 p-3 bg-light border rounded">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-1"><i class="fas fa-sign-in-alt fa-fw me-1 icon-brand-muted"></i> If not already logged in, log in using the popup form.</li>
+                                <li class="mb-1"><i class="fas fa-check-square fa-fw me-1 icon-brand-muted"></i> Select the scenario <b>{{ scenario.name }}</b> from the dropdown list.</li>
+                                <li><i class="fas fa-play-circle fa-fw me-1 icon-brand-muted"></i> Click the <strong>Start Recording</strong> button.</li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-hand-point-up fa-fw me-2 align-middle icon-brand-accent"></i>
+                        Interact with the application as you normally would for monitoring. Click on elements to define actions.
+                    </li>
+                    <li>
+                        <i class="fas fa-stop-circle fa-fw me-2 align-middle icon-brand-accent"></i>
+                        When finished, click <strong>Stop Recording</strong> in the extension popup.
+                    </li>
+                </ol>
+
+                <div class="alert alert-info-custom d-flex align-items-center mt-4" role="alert">
+                    <i class="fas fa-info-circle fa-lg me-3"></i> {# Color will be handled by .alert.alert-info-custom i from CSS #}
+                    <div>
+                        <strong>Important:</strong> Perform actions slowly and deliberately. Wait for page elements to load fully before interacting to ensure accurate recording.
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <p class="mt-3 mb-1 fw-medium">Finished Recording?</p>
+                <p class="text-muted small">After you have stopped recording, you can manage the recorded steps or return to your scenarios.</p>
+                <div class="mt-3 d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('scenarios.list_scenarios') }}" class="btn btn-outline-secondary">
+                        Back to Scenarios List
                     </a>
-                </li>
-                <li>Once the application page is fully loaded, click the <b>Megara Recorder</b> icon <img src="{{ url_for('static', filename='icons/icon48.png') }}" alt="Ext Icon" style="width:16px; height:16px; vertical-align:middle;"> in your browser's toolbar.</li>
-                <li>In the extension popup:
-                    <ul>
-                        <li>If not already logged in, log in using the popup form.</li>
-                        <li>Select the scenario <b>{{ scenario.name }}</b> from the dropdown list.</li>
-                        <li>Click the <strong>Start Recording</strong> button.</li>
-                    </ul>
-                </li>
-                <li>Interact with the application as you normally would for monitoring. Click on elements to define actions.</li>
-                <li>When finished, click <strong>Stop Recording</strong> in the extension popup.</li>
-            </ol>
-            <hr>
-            <p class="mt-3">After you have finished recording all steps, you can manage them here:</p>
-            <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-info">
-                View Scenario Details & Recorded Steps
-            </a>
-             <a href="{{ url_for('scenarios.list_scenarios') }}" class="btn btn-outline-secondary ms-2">
-                Back to Scenarios List
-            </a>
+                    <a href="{{ url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-primary">
+                        View Scenario Details & Recorded Steps <i class="fas fa-arrow-right ms-1"></i> {# Will inherit color from btn-primary text #}
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    {# No longer need the hidden div or special JS for this page #}
 {% endblock %}
-
-{# Remove the specific scripts block if it only contained the chrome.storage.local logic #}
-{% block scripts %}{{ super() }}{% endblock %}
