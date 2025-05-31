@@ -70,7 +70,6 @@ class Scenario(db.Model):
     name = db.Column(db.String(255), nullable=False)
     megara_url = db.Column(db.Text, nullable=False)
     schedule_cron = db.Column(db.String(100), nullable=False) # Cron format string
-    enable_anomalies = db.Column(db.Boolean, nullable=False, default=False)
     email_recipients = db.Column(db.Text, nullable=True) # Store as JSON string or comma-separated
     upload_path = db.Column(db.Text, nullable=True) # Path for report uploads
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.utcnow)
@@ -184,6 +183,7 @@ class MonitoringResult(db.Model):
     # Using Text for flexibility, assumes conversion/parsing happens during analysis/visualization
     metric_value = db.Column(db.Text, nullable=True)
     is_anomaly = db.Column(db.Boolean, nullable=False, default=False, index=True) # Flag from anomaly detection
+    anomaly_score = db.Column(db.Float, nullable=True) # << NEW: For probability or score
     recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True) # Timestamp for the specific metric
 
     # Foreign Key

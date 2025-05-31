@@ -11,7 +11,6 @@ class EditScenarioForm(FlaskForm):
     megara_url = StringField('Megara Target URL', validators=[DataRequired(), URL(message='Please enter a valid URL.',require_tld=False)])
     schedule_cron = StringField('Schedule (Cron Format)', validators=[DataRequired()],
                                 description='Use standard cron format (minute hour day-of-month month day-of-week)')
-    enable_anomalies = BooleanField('Enable Anomaly Detection')
     email_recipients = TextAreaField('Email Recipients (comma-separated)', validators=[Optional()],
                                      description='Enter email addresses separated by commas.')
     upload_path = StringField('Report Upload Path', validators=[Optional()],

@@ -1,0 +1,1 @@
+{"numerical_features": ["ObservedDurationMetric", "CommitmentHour", "DayOfWeek"], "categorical_features": ["SubAxis", "ProcessName", "Periodicity", "Status_D_minus_1"]}

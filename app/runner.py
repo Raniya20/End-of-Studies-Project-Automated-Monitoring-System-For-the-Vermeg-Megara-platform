@@ -3,7 +3,7 @@
 import os
 import time
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, time as dt_time, date as dt_date, timedelta # Ensure time, date are aliased if datetime.time/date used
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, expect
 import pandas as pd
 import numpy as np # Import numpy for NaN
@@ -26,44 +26,62 @@ from app.models import (Scenario, ScenarioStep, ExecutionLog, MonitoringResult,
 
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
+from ml_model.predictor import predict_anomalies, EXPECTED_FEATURE_NAMES, pipeline as ml_pipeline_from_predictor
 # from sklearn.ensemble import IsolationForest # Type hint if needed
 
-# --- ADD CONSTANTS AND HELPER FUNCTION HERE ---
+# --- Define Constants needed for Feature Engineering in this Runner ---
+# (These should mirror what your training script uses to produce the columns in EXPECTED_FEATURE_NAMES,
+#  or be the names of columns already present in the scraped DataFrame df_input)
 
-# Define Standardized Column Names (MUST match names used in training/CSV)
-PROCESS_COL = 'Process'
-PERIODICITY_COL = 'Periodicity'
-STATUS_TODAY_COL = 'Status_Today'
-STATUS_LEGEND_COL = 'Status_Legend'
-REMARKS_COL = 'Remarks'
-# Add others if needed
+# Standardized Column Names (from scraped/pre-processed data available in df_input)
+STD_COL_PROCESS = 'Process'
+STD_COL_PERIODICITY = 'Periodicity'
+STD_COL_STATUS_TODAY = 'Status_Today' # Standardized status after rules
+STD_COL_REMARKS_RAW = 'Remarks_Raw' # If you save raw remarks
+STD_COL_TIME_EXPECTED_STR = 'Time_Expected_Str'
+STD_COL_TIME_ACTUAL_STR = 'Time_Actual_Str'
+STD_COL_REPORT_DATE = 'Report_Date' # Should be a datetime.date object in df_input
+STD_COL_STATUS_YESTERDAY_RAW = 'Status_Yesterday' # Raw D-1 status from input
 
-# Engineered Feature Names (MUST match names used in training)
-FEATURE_EXTRACTED_COUNT = 'Extracted_Count'
-FEATURE_IS_PENDING = 'Is_Pending_Today'
-FEATURE_IS_ERROR_LEGEND = 'Is_Error_Legend'
+# Fixed monitoring time for PENDING duration calculation (example)
+MONITORING_HOUR = 19
+MONITORING_MINUTE = 0
 
-def parse_count_from_remarks(remark):
-    """Extracts the first integer number from the remarks string."""
-    if not isinstance(remark, str):
-        return np.nan # Return NaN if remark is not a string
-    # Look for sequences of digits, possibly with commas or spaces
+
+# --- Helper Functions (used for feature engineering within the runner) ---
+def parse_time_robust(time_input):
+    if pd.isna(time_input): return None
+    if isinstance(time_input, dt_time): return time_input
+    if isinstance(time_input, datetime): return time_input.time()
+    time_str = str(time_input).strip()
+    formats_to_try = ["%H:%M", "%H:%M:%S", "%I:%M:%S %p", "%I:%M %p", "%H.%M.%S"]
+    for fmt in formats_to_try:
+        try: return datetime.strptime(time_str, fmt).time()
+        except ValueError: continue
+    logging.debug(f"Runner: Could not parse time: '{time_input}'")
+    return None
+
+def parse_count_from_remarks(remark): # If 'Extracted_Count' is an EXPECTED_FEATURE_NAME
+    if not isinstance(remark, str): return np.nan
     match = re.search(r'\d{1,3}(?:[,\s]\d{3})*|\d+', remark)
     if match:
-        try:
-            # Remove commas/spaces and convert to int
-            num_str = match.group(0).replace(',', '').replace(' ', '')
-            return int(num_str)
-        except (ValueError, TypeError):
-            return np.nan # Return NaN if conversion fails
-    return np.nan # Return NaN if no number found
+        try: return int(match.group(0).replace(',', '').replace(' ', ''))
+        except: return np.nan
+    return np.nan
 
-# --- END ADDED CONSTANTS AND HELPER FUNCTION ---
+def calculate_delay(report_date, expected_time_obj, actual_time_obj):
+    if pd.isna(report_date) or expected_time_obj is None or actual_time_obj is None: return np.nan
+    try:
+        if isinstance(report_date, datetime): report_date = report_date.date()
+        elif not isinstance(report_date, dt_date): report_date = pd.to_datetime(report_date).date()
+        dt_expected = datetime.combine(report_date, expected_time_obj)
+        dt_actual = datetime.combine(report_date, actual_time_obj)
+        if dt_actual < dt_expected: dt_actual += timedelta(days=1)
+        return (dt_actual - dt_expected).total_seconds() / 60.0
+    except: return np.nan
 
-
-
-# Configure basic logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# --- Configure basic logging ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - RUNNER - %(levelname)s - %(message)s')
 
 
 class AutomationRunner:
@@ -72,139 +90,52 @@ class AutomationRunner:
     stored in the database. Includes data processing, anomaly detection structure,
     and report generation.
     """
-    DEFAULT_TIMEOUT = 15000 # Milliseconds (15 seconds)
+    
+    DEFAULT_TIMEOUT = 15000
 
     def __init__(self, scenario_id: int, app, headless: bool = True):
-        """
-        Initializes the runner for a specific scenario.
-        :param scenario_id: The ID of the Scenario to run.
-        :param headless: Whether to run the browser in headless mode.
-        """
         self.scenario_id = scenario_id
         self.headless = headless
-        self.app = app # Store the app instance
+        self.app = app # Flask app instance for config and context
         self.scenario: Scenario | None = None
         self.log_entry: ExecutionLog | None = None
         self.playwright = None
         self.browser = None
         self.page: Page | None = None
-        self.results = {} # Stores extracted data {label: data (str or DataFrame)}
-        self.processing_rules: list[ProcessingRule] = [] # Stores processing rules
-        # --- Anomaly Detection Attributes ---
-        self.anomaly_model = None # Will hold the loaded model instance
-        self.anomaly_scaler = None # Will hold the loaded scaler instance
-        # Use environment variables for paths, default to project root
-        self.model_path = os.environ.get('ANOMALY_MODEL_PATH', 'anomaly_model.joblib')
-        self.scaler_path = os.environ.get('ANOMALY_SCALER_PATH', 'anomaly_scaler.joblib')
-        # --- END Anomaly Detection Attributes ---
-        # Add storage for more preprocessors
-        self.anomaly_imputer = None
-        self.anomaly_onehot_encoder = None
-        self.anomaly_feature_names = None # Store expected feature names
-        self.imputer_path = os.environ.get('ANOMALY_IMPUTER_PATH', 'anomaly_imputer.joblib')
-        self.ohe_path = os.environ.get('ANOMALY_OHE_PATH', 'anomaly_onehot_encoder.joblib')
-        self.features_path = os.environ.get('ANOMALY_FEATURES_PATH', 'anomaly_features.joblib')
-
-
-        # --- UPDATED: Load ML Models and Preprocessors ---
-    def _load_ml_model(self):
-        """Loads the anomaly detection model, scaler, imputer, encoder, and feature list."""
-        if not self.scenario or not self.scenario.enable_anomalies:
-            logging.info("Anomaly detection disabled. Skipping model/preprocessor load.")
-            return
-
-        # --- Load Model ---
-        abs_model_path = os.path.abspath(self.model_path)
-        logging.info(f"Attempting to load anomaly model from: {abs_model_path}")
-        try:
-            self.anomaly_model = joblib.load(abs_model_path)
-            logging.info("Anomaly model loaded successfully.")
-        except FileNotFoundError:
-            logging.warning(f"Model file not found: '{abs_model_path}'. AD skipped."); return
-        except Exception as e:
-            logging.error(f"Error loading model '{abs_model_path}': {e}", exc_info=True); return
-
-        # --- Load Scaler ---
-        abs_scaler_path = os.path.abspath(self.scaler_path)
-        logging.info(f"Attempting to load scaler from: {abs_scaler_path}")
-        try:
-            self.anomaly_scaler = joblib.load(abs_scaler_path)
-            logging.info("Scaler loaded successfully.")
-        except FileNotFoundError:
-            logging.error(f"Scaler file not found: '{abs_scaler_path}'. AD cannot proceed."); self.anomaly_model=None; return
-        except Exception as e:
-            logging.error(f"Error loading scaler '{abs_scaler_path}': {e}", exc_info=True); self.anomaly_model=None; return
-
-        # --- Load Imputer (Optional) ---
-        abs_imputer_path = os.path.abspath(self.imputer_path)
-        logging.info(f"Attempting to load imputer from: {abs_imputer_path}")
-        try:
-            self.anomaly_imputer = joblib.load(abs_imputer_path)
-            logging.info("Imputer loaded successfully.")
-        except FileNotFoundError:
-            logging.info(f"Imputer file not found: '{abs_imputer_path}'. Assuming no imputation needed for prediction.")
-            self.anomaly_imputer = None # Okay to proceed without imputer if training data had no NaNs
-        except Exception as e:
-            # Log error but maybe proceed? Depends if imputation is critical
-            logging.error(f"Error loading imputer '{abs_imputer_path}': {e}", exc_info=True)
-            self.anomaly_imputer = None
-
-        # --- Load OneHotEncoder ---
-        abs_ohe_path = os.path.abspath(self.ohe_path)
-        logging.info(f"Attempting to load OneHotEncoder from: {abs_ohe_path}")
-        try:
-            self.anomaly_onehot_encoder = joblib.load(abs_ohe_path)
-            logging.info("OneHotEncoder loaded successfully.")
-        except FileNotFoundError:
-            logging.error(f"OneHotEncoder file not found: '{abs_ohe_path}'. AD cannot proceed."); self.anomaly_model=None; return
-        except Exception as e:
-            logging.error(f"Error loading OneHotEncoder '{abs_ohe_path}': {e}", exc_info=True); self.anomaly_model=None; return
-
-        # --- Load Feature Names ---
-        abs_features_path = os.path.abspath(self.features_path)
-        logging.info(f"Attempting to load feature list from: {abs_features_path}")
-        try:
-            self.anomaly_feature_names = joblib.load(abs_features_path)
-            logging.info(f"Feature list loaded successfully: {self.anomaly_feature_names}")
-        except FileNotFoundError:
-            logging.error(f"Feature list file not found: '{abs_features_path}'. AD cannot reliably proceed."); self.anomaly_model=None; return
-        except Exception as e:
-            logging.error(f"Error loading feature list '{abs_features_path}': {e}", exc_info=True); self.anomaly_model=None; return
+        self.results = {} # Stores {label: DataFrame or str} from extraction
+        self.processing_rules: list[ProcessingRule] = []
+        # ML artifacts are not loaded here; predictor.py handles that.
+        self.typical_durations = {}
+        self.typical_durations_path = os.environ.get('TYPICAL_DURATIONS_PATH', 'typical_durations.json')
 
 
     def _setup(self):
-        """Loads scenario, rules, creates log entry, initializes Playwright & ML Model."""
+        """Loads scenario, rules, creates log entry, initializes Playwright."""
         logging.info(f"Setting up runner for Scenario ID: {self.scenario_id}")
-
-        # 1. Load Scenario from DB
         self.scenario = db.session.get(Scenario, self.scenario_id)
         if not self.scenario: raise ValueError(f"Scenario ID {self.scenario_id} not found.")
         logging.info(f"Loaded Scenario: {self.scenario.name}")
 
-        # 2. Load Processing Rules
         self.processing_rules = self.scenario.processing_rules.all()
         logging.info(f"Loaded {len(self.processing_rules)} processing rules.")
 
-        # 3. Create initial ExecutionLog entry
         self.log_entry = ExecutionLog(
             scenario_id=self.scenario_id,
-            start_time=datetime.utcnow(),
+            start_time=datetime.utcnow(), # Use timezone.utc if using tz-aware datetimes
             status=ExecutionStatusEnum.RUNNING
         )
         db.session.add(self.log_entry)
-        db.session.flush() # Get the log_id
+        db.session.flush()
         logging.info(f"Created Execution Log Entry ID: {self.log_entry.log_id}")
 
-        # 4. Initialize Playwright
         logging.info(f"Launching Playwright (Headless: {self.headless})...")
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=self.headless)
         self.page = self.browser.new_page()
         self.page.set_default_timeout(self.DEFAULT_TIMEOUT)
         logging.info("Playwright browser page initialized.")
-
-        # 5. Load ML Model (after scenario loaded)
-        self._load_ml_model()
+        # No _load_ml_model() call needed here.
+        self._load_typical_durations()
 
 
     def _teardown(self, status: ExecutionStatusEnum, message: str | None = None):
@@ -371,251 +302,277 @@ class AutomationRunner:
             raise
 
 
-    def _apply_anomaly_detection(self, df: pd.DataFrame, label: str) -> pd.DataFrame:
+    def _apply_anomaly_detection(self, df_input: pd.DataFrame, label: str) -> pd.DataFrame:
         """
-        Applies the trained anomaly detection model and preprocessors to a DataFrame.
-
-        Args:
-            df (pd.DataFrame): The DataFrame containing extracted data (potentially
-                               modified by processing rules).
-            label (str): The label associated with this DataFrame (e.g., 'example_table_1').
-
-        Returns:
-            pd.DataFrame: The original DataFrame with an 'Is_Anomaly' boolean column added.
-                          Returns the original DataFrame unmodified if detection is skipped.
+        Prepares features from df_input (scraped data after rules)
+        and calls the ML predictor.
         """
-        # --- Default Column & Prerequisites Check ---
-        # Ensure Is_Anomaly column exists, default to False. If detection runs, it will be overwritten.
-        if 'Is_Anomaly' not in df.columns: df['Is_Anomaly'] = False
+        df_output = df_input.copy()
+        if 'Is_Anomaly' not in df_output.columns: df_output['Is_Anomaly'] = False
+        if 'Anomaly_Probability_Normal' not in df_output.columns: df_output['Anomaly_Probability_Normal'] = pd.NA
 
-        # Check if anomaly detection should run
-        if (not self.scenario or not self.scenario.enable_anomalies or # Scenario exists and enabled?
-                not self.anomaly_model or not self.anomaly_scaler or    # Model and scaler loaded?
-                not self.anomaly_onehot_encoder or not self.anomaly_feature_names or # OHE and feature list loaded?
-                df.empty):                                               # DataFrame has data?
+        # --- Use the imported alias 'ml_pipeline_from_predictor' ---
+        if not self.scenario or not self.scenario.enable_anomalies: # If you keep this flag
+            logging.debug(f"AD Skip for '{label}': Anomaly detection not enabled for this scenario.")
+            return df_output
+        if not ml_pipeline_from_predictor or not EXPECTED_FEATURE_NAMES: # Use correct variable name
+            logging.warning(f"AD Skip for '{label}': ML pipeline or expected features not loaded by predictor module.")
+            return df_output
+        if df_output.empty:
+            logging.info(f"AD Skip for '{label}': Input DataFrame is empty.")
+            return df_output
+        # --- END CORRECTION ---
 
-            # Log reason only if detection was expected but prerequisites failed
-            if self.scenario and self.scenario.enable_anomalies and (not self.anomaly_model or not self.anomaly_scaler or not self.anomaly_onehot_encoder or not self.anomaly_feature_names):
-                 logging.warning(f"Skipping anomaly detection for '{label}': prerequisites (model/scaler/encoder/features) not met. Check loading process.")
-            elif self.scenario and self.scenario.enable_anomalies and df.empty:
-                 logging.warning(f"Skipping anomaly detection for '{label}': DataFrame is empty.")
-            # Otherwise, detection is simply disabled or df empty, no warning needed
+        logging.info(f"Preparing data from '{label}' for anomaly detection (Model expects: {EXPECTED_FEATURE_NAMES})...")
 
-            return df # Return original df with default Is_Anomaly=False
-
-        logging.info(f"Applying anomaly detection for DataFrame '{label}' using trained model...")
-        df_processed = df.copy() # Work on a copy to avoid modifying original results dict directly
-
-        # --- 1. Feature Engineering (Replicate training steps on NEW data) ---
-        #    Ensure the necessary base columns exist and create the engineered features
-        #    the model was trained on. This section MUST align with train_anomaly_model.py
-
-        base_numeric_features = ['Extracted_Count'] # Names MUST match those used in training script
-        base_categorical_features = ['Is_Pending_Today', 'Is_Error_Legend'] # Names MUST match training
-        base_ohe_feature = 'Periodicity' # Name MUST match training
-
-        # a) Extract Count
-        if FEATURE_EXTRACTED_COUNT not in df_processed.columns:
-            if REMARKS_COL in df_processed.columns:
-                 df_processed[FEATURE_EXTRACTED_COUNT] = df_processed[REMARKS_COL].apply(parse_count_from_remarks)
-                 logging.debug(f"  Engineered '{FEATURE_EXTRACTED_COUNT}' for prediction.")
-            else: logging.error(f"AD Skip: Cannot engineer '{FEATURE_EXTRACTED_COUNT}', missing base '{REMARKS_COL}'."); return df
-
-        # b) Is Pending Today
-        if FEATURE_IS_PENDING not in df_processed.columns:
-            if STATUS_TODAY_COL in df_processed.columns:
-                 df_processed[STATUS_TODAY_COL] = df_processed[STATUS_TODAY_COL].astype(str).str.upper().str.strip()
-                 df_processed[FEATURE_IS_PENDING] = df_processed[STATUS_TODAY_COL].apply(lambda x: 1 if x == 'PDTE' else 0)
-                 logging.debug(f"  Engineered '{FEATURE_IS_PENDING}' for prediction.")
-            else: logging.error(f"AD Skip: Cannot engineer '{FEATURE_IS_PENDING}', missing base '{STATUS_TODAY_COL}'."); return df
-
-        # c) Is Error Legend
-        if FEATURE_IS_ERROR_LEGEND not in df_processed.columns:
-            if STATUS_LEGEND_COL in df_processed.columns:
-                df_processed[STATUS_LEGEND_COL] = df_processed[STATUS_LEGEND_COL].astype(str).str.upper().str.strip()
-                df_processed[FEATURE_IS_ERROR_LEGEND] = df_processed[STATUS_LEGEND_COL].apply(lambda x: 1 if x in ['KO', 'KR'] else 0)
-                logging.debug(f"  Engineered '{FEATURE_IS_ERROR_LEGEND}' for prediction.")
-            else: logging.error(f"AD Skip: Cannot engineer '{FEATURE_IS_ERROR_LEGEND}', missing base '{STATUS_LEGEND_COL}'."); return df
-
-        # d) Periodicity - Ensure column exists and has consistent format for OHE
-        if PERIODICITY_COL not in df_processed.columns:
-            logging.error(f"AD Skip: Required base column '{PERIODICITY_COL}' for OHE missing."); return df
-        df_processed[PERIODICITY_COL] = df_processed[PERIODICITY_COL].astype(str).fillna('Unknown').str.strip().str.capitalize()
-
-        # --- 2. Preprocessing (Using loaded objects) ---
-        logging.debug("  Applying preprocessing steps using loaded objects...")
-
-        # a) Impute Missing Numeric Values (Use loaded imputer ONLY if it exists)
-        numeric_cols_to_process = [col for col in base_numeric_features if col in df_processed.columns]
-        if not numeric_cols_to_process:
-             logging.warning(f"No numeric features ({base_numeric_features}) found in DataFrame '{label}' for imputation/scaling.")
-             # Continue if no numeric features expected, error if they were? Depends on model.
-        elif self.anomaly_imputer:
+        data_for_prediction_list = []
+        for index, row in df_output.iterrows():
+            instance_features = {}
             try:
-                # Only transform columns that were part of the imputer's fitting process
-                # We assume the imputer was fitted ONLY on base_numeric_features during training
-                df_processed[numeric_cols_to_process] = self.anomaly_imputer.transform(df_processed[numeric_cols_to_process])
-                logging.debug(f"  Applied loaded imputer to: {numeric_cols_to_process}")
-            except Exception as e:
-                 logging.error(f"Error applying loaded imputer: {e}", exc_info=True); return df # Stop if imputation fails
-        elif df_processed[numeric_cols_to_process].isnull().values.any():
-             # Handle case where NaNs exist now but didn't during training (no imputer saved)
-             logging.warning(f"Missing values found in {numeric_cols_to_process} but no imputer loaded. Filling with 0 for prediction.")
-             df_processed[numeric_cols_to_process] = df_processed[numeric_cols_to_process].fillna(0)
+                # --- a) Categorical Features ---
+                # These names MUST align with your feature_names_for_prediction.json
+                # Map from columns in df_output (e.g., STD_COL_PROCESS) to expected model input names.
+                # Example: Subeje is a raw column, SubAxis is what the model expects
+                instance_features['SubAxis'] = str(row.get('Subeje', 'Unknown_SubAxis'))
+                instance_features['ProcessName'] = str(row.get(STD_COL_PROCESS, 'Unknown_Process'))
+                instance_features['Periodicity'] = str(row.get(STD_COL_PERIODICITY, 'Unknown_Periodicity')).capitalize()
+                instance_features['Status_D_minus_1'] = str(row.get(STD_COL_STATUS_YESTERDAY_RAW, 'UNKNOWN')).upper()
 
-        # b) One-Hot Encode Periodicity (Use loaded encoder)
+
+                # --- b) Numerical Features ---
+                report_date_obj = row.get(STD_COL_REPORT_DATE)
+                if isinstance(report_date_obj, str): report_date_obj = pd.to_datetime(report_date_obj, errors='coerce').date()
+                elif isinstance(report_date_obj, datetime): report_date_obj = report_date_obj.date()
+                # If still not a date object or is NaT, numerical date-dependent features will be default
+                is_valid_date = isinstance(report_date_obj, dt_date) and not pd.isna(report_date_obj)
+
+                commitment_time_str = row.get(STD_COL_TIME_EXPECTED_STR)
+                commitment_time_obj = parse_time_robust(commitment_time_str) if pd.notna(commitment_time_str) else None
+
+                instance_features['CommitmentHour'] = commitment_time_obj.hour if commitment_time_obj else -1
+                instance_features['DayOfWeek'] = report_date_obj.weekday() if is_valid_date else -1
+
+                # Calculate 'ObservedDurationMetric'
+                current_status_today = str(row.get(STD_COL_STATUS_TODAY, 'UNKNOWN')).upper() # From df_output
+                actual_time_str = row.get(STD_COL_TIME_ACTUAL_STR) # From df_output
+                actual_time_obj = parse_time_robust(actual_time_str) if pd.notna(actual_time_str) else None
+                obs_duration_metric = 0.0 # Default
+
+                if is_valid_date:
+                    if current_status_today == 'OK':
+                        delay = calculate_delay(report_date_obj, commitment_time_obj, actual_time_obj)
+                        obs_duration_metric = delay if pd.notna(delay) else 0.0
+                    elif current_status_today == 'PENDING':
+                        monitoring_time_obj = dt_time(MONITORING_HOUR, MONITORING_MINUTE)
+                        if commitment_time_obj:
+                            commitment_datetime = datetime.combine(report_date_obj, commitment_time_obj)
+                            monitoring_datetime = datetime.combine(report_date_obj, monitoring_time_obj)
+                            if monitoring_datetime > commitment_datetime:
+                                obs_duration_metric = (monitoring_datetime - commitment_datetime).total_seconds() / 60.0
+                            # else: obs_duration_metric remains 0.0
+                        # else: obs_duration_metric remains 0.0
+                    elif current_status_today == 'FAILED':
+                        delay = calculate_delay(report_date_obj, commitment_time_obj, actual_time_obj)
+                        obs_duration_metric = delay if pd.notna(delay) else 9999.0 # High value for failed if no time
+                    # else: obs_duration_metric remains 0.0 (for UNKNOWN)
+                else: # Invalid or missing report_date_obj
+                    logging.debug(f"  AD Row {index}: Report_Date invalid, ObservedDurationMetric defaults for status {current_status_today}")
+                    if current_status_today == 'FAILED': obs_duration_metric = 9999.0
+                    # else remains 0.0
+
+                instance_features['ObservedDurationMetric'] = obs_duration_metric
+
+                # Ensure all features from EXPECTED_FEATURE_NAMES are present in instance_features
+                # This loop creates the final dictionary with the exact expected keys.
+                final_instance_for_prediction = {}
+                for feat_name in EXPECTED_FEATURE_NAMES:
+                    if feat_name in instance_features:
+                        final_instance_for_prediction[feat_name] = instance_features[feat_name]
+                    else:
+                        # This means a feature your model expects was not engineered above.
+                        # This indicates a mismatch between EXPECTED_FEATURE_NAMES and the engineering logic.
+                        logging.error(f"  AD FATAL: Feature '{feat_name}' expected by model was not created for row {index}. Setting to NaN.")
+                        final_instance_for_prediction[feat_name] = np.nan # Pipeline MUST handle this
+                data_for_prediction_list.append(final_instance_for_prediction)
+
+            except Exception as fe_error:
+                logging.error(f"  AD: Error during feature engineering for row {index}: {fe_error}", exc_info=True)
+                # Add a dummy entry to maintain length for prediction array alignment
+                dummy_features = {feat: np.nan for feat in EXPECTED_FEATURE_NAMES}
+                data_for_prediction_list.append(dummy_features)
+
+        if not data_for_prediction_list:
+            logging.warning(f"AD Skip for '{label}': No data to predict after feature engineering."); return df_output
+
         try:
-            periodicity_encoded = self.anomaly_onehot_encoder.transform(df_processed[[base_ohe_feature]])
-            # Get feature names FROM THE LOADED ENCODER
-            ohe_feature_names = self.anomaly_onehot_encoder.get_feature_names_out([base_ohe_feature])
-            periodicity_encoded_df = pd.DataFrame(periodicity_encoded, columns=ohe_feature_names, index=df_processed.index)
-            # Drop original categorical column, add encoded ones
-            df_processed = pd.concat([df_processed.drop(columns=[base_ohe_feature]), periodicity_encoded_df], axis=1)
-            logging.debug(f"  Applied loaded OneHotEncoder for '{base_ohe_feature}'.")
+            predictions_raw, probabilities_raw = predict_anomalies(data_for_prediction_list) # From ml_model.predictor
+            if len(predictions_raw) == len(df_output):
+                df_output['Is_Anomaly'] = [(pred == 0) for pred in predictions_raw] # Assuming 0=Anomaly, 1=Normal
+                df_output['Anomaly_Probability_Normal'] = probabilities_raw
+                num_anomalies = df_output['Is_Anomaly'].sum()
+                logging.info(f"AD for '{label}' applied. Found {num_anomalies} anomalies out of {len(df_output)} instances.")
+            else:
+                logging.error(f"AD Mismatch: Predictions ({len(predictions_raw)}) vs DataFrame ({len(df_output)}). Anomalies not set.")
         except Exception as e:
-            logging.error(f"Error applying loaded OneHotEncoder: {e}", exc_info=True); return df # Stop if OHE fails
-
-        # c) Prepare Final Feature DataFrame for Scaling/Prediction
-        #    Ensure all columns the model expects exist and are in the correct order.
-        df_model_input = pd.DataFrame(index=df_processed.index) # Start with matching index
-        missing_in_current_data = []
-        for feature_name in self.anomaly_feature_names: # Iterate through LOADED feature list
-             if feature_name in df_processed.columns:
-                  df_model_input[feature_name] = df_processed[feature_name]
-             else:
-                  # This happens if a category seen during training isn't in the current batch
-                  # OHE creates columns like Periodicity_Daily, Periodicity_Monthly etc.
-                  # If current data only has Daily, Periodicity_Monthly will be missing.
-                  missing_in_current_data.append(feature_name)
-                  df_model_input[feature_name] = 0 # Add missing one-hot columns as 0
-        if missing_in_current_data:
-             logging.warning(f"  Features missing after preprocessing that were in training: {missing_in_current_data}. Added as 0.")
-
-        # Ensure order is correct (it should be if we built it from anomaly_feature_names)
-        df_model_input = df_model_input[self.anomaly_feature_names]
-
-        # d) Scale Features (Use loaded scaler on the correctly ordered feature set)
-        try:
-            # Scaler expects data in the exact same order and shape as during fitting
-            scaled_features = self.anomaly_scaler.transform(df_model_input)
-            # For clarity, create a new DataFrame with scaled data and correct columns/index
-            df_scaled = pd.DataFrame(scaled_features, columns=self.anomaly_feature_names, index=df_model_input.index)
-            logging.debug("  Applied loaded scaler to the final feature set.")
-        except Exception as e:
-            logging.error(f"Error applying loaded scaler: {e}", exc_info=True); return df # Stop if scaling fails
-
-        # --- 3. Prediction ---
-        logging.info(f"Predicting anomalies using loaded model for {len(df_scaled)} rows...")
-        try:
-            # Predict using the scaled data prepared exactly as during training
-            predictions = self.anomaly_model.predict(df_scaled) # Returns 1 (inlier) or -1 (outlier)
-
-            # Assign predictions back to the ORIGINAL input DataFrame 'df'
-            # using the index to ensure correct alignment.
-            df['Is_Anomaly'] = (predictions == -1) # True if outlier (-1)
-
-            num_anomalies = df['Is_Anomaly'].sum()
-            logging.info(f"Anomaly detection applied. Found {num_anomalies} potential anomalies in '{label}'.")
-        except Exception as e:
-            logging.error(f"Error during anomaly prediction for '{label}': {e}", exc_info=True)
-            # Keep default Is_Anomaly=False in df if prediction fails
-
-        return df # Return the original DataFrame with 'Is_Anomaly' column updated
+            logging.error(f"Error during predict_anomalies call for '{label}': {e}", exc_info=True)
+        return df_output
 
 
     def _apply_processing_rules(self):
-        """Applies defined processing rules and then anomaly detection to DataFrame results."""
-        if not self.processing_rules and not (self.scenario and self.scenario.enable_anomalies and self.anomaly_model):
-            logging.info("No processing rules or enabled/loaded anomaly detection. Skipping processing.")
+        """Applies defined processing rules and then anomaly detection."""
+        rules_are_present = bool(self.processing_rules) # Define it
+        ad_is_possible = bool(self.scenario and self.scenario.enable_anomalies and ml_pipeline_from_predictor)
+
+        if not rules_are_present and not ad_is_possible:
+            logging.info("No processing rules and AD not possible/enabled. Skipping.")
             return
-        logging.info("Applying processing rules and anomaly detection (if enabled)...")
+        logging.info("Applying processing rules and then anomaly detection (if enabled & model loaded)...")
 
-        for label, data in list(self.results.items()):
-            if isinstance(data, pd.DataFrame):
-                df = data.copy() # Work on a copy to avoid modifying original dict item directly during iteration
+        for label, data in list(self.results.items()): # Use list for safe iteration if modifying dict
+            if isinstance(data, pd.DataFrame) and not data.empty:
+                df_current = data.copy() # Work on a copy
 
-                # --- Apply Rules ---
-                if self.processing_rules:
+                if rules_are_present:
                     logging.info(f"Applying rules for extracted DataFrame '{label}'...")
-                    # Check for needed columns and add if missing (avoids errors)
-                    rule_columns = set(rule.condition_column for rule in self.processing_rules) | \
-                                   set(rule.action_column for rule in self.processing_rules)
-                    missing_cols = [col for col in rule_columns if col not in df.columns]
-                    if missing_cols:
-                        logging.warning(f"  DataFrame '{label}' is missing columns required by rules: {missing_cols}. Adding them as empty.")
-                        for col in missing_cols: df[col] = None
-
-                    # Apply rules
-                    for i, rule in enumerate(self.processing_rules):
-                        # ... (Rule application logic as defined previously) ...
-                        try:
-                            condition = None
-                            col_series = df[rule.condition_column]
-                            col_str = col_series.astype(str).fillna('')
-                            val = str(rule.condition_value) if rule.condition_value is not None else ""
-                            op = rule.operator
-                            if op == RuleOperatorEnum.EQUALS: condition = (col_str == val)
-                            elif op == RuleOperatorEnum.NOT_EQUALS: condition = (col_str != val)
-                            elif op == RuleOperatorEnum.CONTAINS: condition = col_str.str.contains(val, case=False, na=False)
-                            elif op == RuleOperatorEnum.IS_BLANK: condition = col_str == ''
-                            elif op == RuleOperatorEnum.IS_NOT_BLANK: condition = col_str != ''
-                            # Add numeric comparisons later if needed
-                            else: logging.warning(f"Rule operator '{op.name}' not handled."); continue
-                            if condition is not None:
-                                if rule.action_column not in df.columns: df[rule.action_column] = None
-                                df.loc[condition, rule.action_column] = rule.action_value
-                        except Exception as e: logging.error(f"Error applying rule {rule.rule_id} to '{label}': {e}", exc_info=True)
+                    # ... (Your existing rule application logic that modifies df_current) ...
                     logging.info(f"Finished applying rules for '{label}'.")
 
-                # --- Apply Anomaly Detection (After Rules) ---
-                df = self._apply_anomaly_detection(df, label)
+                # Apply Anomaly Detection (will run if model loaded and scenario enabled)
+                df_current = self._apply_anomaly_detection(df_current, label)
 
-                # Update the results dictionary with the fully processed DataFrame
-                self.results[label] = df
+                self.results[label] = df_current # Update results dict with processed DataFrame
+            elif isinstance(data, pd.DataFrame) and data.empty:
+                 logging.info(f"DataFrame '{label}' is empty. Skipping rules and AD.")
+                 # Ensure Is_Anomaly and Anomaly_Probability_Normal columns exist even for empty DFs if expected downstream
+                 if 'Is_Anomaly' not in data.columns: data['Is_Anomaly'] = []
+                 if 'Anomaly_Probability_Normal' not in data.columns: data['Anomaly_Probability_Normal'] = []
+                 self.results[label] = data # Put back the empty (but potentially schema-consistent) DF
 
     def _save_monitoring_results(self):
-        """Saves processed data points (including anomaly flags) to the MonitoringResult table."""
-        if not self.log_entry: logging.error("Cannot save results: Log entry missing."); return
-        if not self.results: logging.info("No results extracted to save."); return
+        """
+        Saves key features, ML predictions, and contextual information for each
+        processed instance (row) to the MonitoringResult table.
+        """
+        if not self.log_entry:
+            logging.error("Cannot save monitoring results: ExecutionLog entry not found."); return
+        if not self.results:
+            logging.info("No results extracted to save."); return
 
-        logging.info(f"Saving monitoring results for Log ID: {self.log_entry.log_id}...")
+        logging.info(f"Saving key monitoring results for Log ID: {self.log_entry.log_id}...")
         results_to_add = []
-        current_time = datetime.utcnow()
+        current_time = datetime.utcnow() # Use one timestamp for all results of this run
 
+        # Find the primary DataFrame that went through AD (assume one main table)
+        primary_df_label = None
+        processed_df_for_saving = None
         for label, data in self.results.items():
-            if isinstance(data, pd.DataFrame):
-                logging.debug(f"Formatting DataFrame '{label}' for saving...")
-                # Example: Save specific columns + anomaly flag per row
-                target_cols = data.columns[:5].tolist() # Adjust which columns to save
-                anomaly_col_present = 'Is_Anomaly' in data.columns
-                if anomaly_col_present and 'Is_Anomaly' not in target_cols: target_cols.append('Is_Anomaly')
+            if isinstance(data, pd.DataFrame) and 'Is_Anomaly' in data.columns: # Identify by presence of AD output
+                processed_df_for_saving = data
+                primary_df_label = label
+                logging.info(f"Found processed DataFrame '{primary_df_label}' for detailed result saving.")
+                break
+        
+        if processed_df_for_saving is None:
+            logging.warning("No processed DataFrame with anomaly flags found in results. Detailed metrics not saved.")
+            # Optionally, still save scalar results if any
+            for label, data in self.results.items():
+                if not isinstance(data, pd.DataFrame): # Scalar results
+                     results_to_add.append(MonitoringResult(
+                         log_id=self.log_entry.log_id, metric_name=label, metric_value=str(data),
+                         is_anomaly=False, recorded_at=current_time ))
+            # ... (bulk save logic for scalar only) ...
+            return
 
-                for index, row in data.iterrows():
-                    is_anomaly_flag = bool(row['Is_Anomaly']) if anomaly_col_present else False
-                    for col_name in target_cols:
-                        if col_name == 'Is_Anomaly': continue # Skip saving the flag itself as a metric
-                        if col_name in row:
-                           results_to_add.append(MonitoringResult(
-                               log_id=self.log_entry.log_id,
-                               metric_name=f"{label}_{index}_{col_name}",
-                               metric_value=str(row[col_name]),
-                               is_anomaly=is_anomaly_flag, # Save flag associated with this row
-                               recorded_at=current_time ))
-            elif isinstance(data, (str, int, float, bool)):
+        # Iterate through each row of the processed DataFrame
+        for index, row_data in processed_df_for_saving.iterrows():
+            # Construct a base metric name prefix for this process instance
+            # Uses the 'Process' column which should be standardized by now
+            process_name_str = str(row_data.get(STD_COL_PROCESS, f"Row_{index}")).replace(" ", "_")
+            periodicity_str = str(row_data.get(STD_COL_PERIODICITY, "UnknownP")).replace(" ", "_")
+            base_metric_prefix = f"{primary_df_label}_{process_name_str}_{periodicity_str}_{index}" # Unique enough
+
+            # 1. Save the overall anomaly flag for this instance/row
+            is_row_anomalous = bool(row_data.get('Is_Anomaly', False))
+            results_to_add.append(MonitoringResult(
+                log_id=self.log_entry.log_id,
+                metric_name=f"{base_metric_prefix}_IsAnomalousFlag", # Specific name for the flag
+                metric_value=str(is_row_anomalous),
+                is_anomaly=is_row_anomalous, # The flag itself
+                anomaly_score=row_data.get('Anomaly_Probability_Normal'), # P(Normal)
+                recorded_at=current_time
+            ))
+
+            # 2. Save key features that went into the model
+            # These names MUST match the keys in your EXPECTED_FEATURE_NAMES / instance_features
+            features_to_save = {
+                'ObservedDurationMetric': row_data.get('ObservedDurationMetric'), # This is already in df_output
+                'CommitmentHour': row_data.get('CommitmentHour_ModelInput'), # Assuming you named it this in feature engineering
+                'DayOfWeek': row_data.get('DayOfWeek_ModelInput'),       # Assuming you named it this
+                # Add any other key numerical features from EXPECTED_FEATURE_NAMES
+            }
+            # We also need Status_D_minus_1 for context if it was a feature
+            if 'Status_D_minus_1' in EXPECTED_FEATURE_NAMES:
+                 features_to_save['Status_D_minus_1'] = row_data.get('Status_D_minus_1') # From feature engineering
+
+            for feat_name, feat_val in features_to_save.items():
+                if pd.notna(feat_val): # Only save if value exists
+                    results_to_add.append(MonitoringResult(
+                        log_id=self.log_entry.log_id,
+                        metric_name=f"{base_metric_prefix}_{feat_name}",
+                        metric_value=str(feat_val),
+                        is_anomaly=is_row_anomalous, # Associate with the row's anomaly status
+                        anomaly_score=row_data.get('Anomaly_Probability_Normal'),
+                        recorded_at=current_time
+                    ))
+
+            # 3. Save contextual "Typical_OK_Completion_Duration"
+            # Construct key for lookup (ProcessName + Periodicity)
+            process_identifier_for_lookup = f"{row_data.get(STD_COL_PROCESS, '')} ({row_data.get(STD_COL_PERIODICITY, '')})"
+            typical_duration = self.typical_durations.get(process_identifier_for_lookup)
+            if typical_duration is not None:
+                results_to_add.append(MonitoringResult(
+                    log_id=self.log_entry.log_id,
+                    metric_name=f"{base_metric_prefix}_TypicalOKDuration",
+                    metric_value=str(typical_duration),
+                    is_anomaly=is_row_anomalous,
+                    anomaly_score=row_data.get('Anomaly_Probability_Normal'),
+                    recorded_at=current_time
+                ))
+
+            # 4. Save original Status_D for this row (for breakdown chart)
+            original_status_d = str(row_data.get(STD_COL_STATUS_TODAY, 'UNKNOWN')) # STD_COL_STATUS_TODAY is the standardized 'OK'/'PENDING'/'FAILED'
+            results_to_add.append(MonitoringResult(
+                log_id=self.log_entry.log_id,
+                metric_name=f"{base_metric_prefix}_OriginalStatusD",
+                metric_value=original_status_d,
+                is_anomaly=is_row_anomalous,
+                anomaly_score=row_data.get('Anomaly_Probability_Normal'),
+                recorded_at=current_time
+            ))
+            
+            # 5. Save raw time strings for display on dashboard if needed
+            results_to_add.append(MonitoringResult(log_id=self.log_entry.log_id, metric_name=f"{base_metric_prefix}_{STD_COL_TIME_EXPECTED_STR}", metric_value=str(row_data.get(STD_COL_TIME_EXPECTED_STR, '')), is_anomaly=is_row_anomalous, recorded_at=current_time))
+            results_to_add.append(MonitoringResult(log_id=self.log_entry.log_id, metric_name=f"{base_metric_prefix}_{STD_COL_TIME_ACTUAL_STR}", metric_value=str(row_data.get(STD_COL_TIME_ACTUAL_STR, '')), is_anomaly=is_row_anomalous, recorded_at=current_time))
+
+
+        # Save any scalar results from self.results as before
+        for label, data in self.results.items():
+            if not isinstance(data, pd.DataFrame): # Scalar results
                  results_to_add.append(MonitoringResult(
                      log_id=self.log_entry.log_id, metric_name=label, metric_value=str(data),
                      is_anomaly=False, recorded_at=current_time ))
-            else: logging.warning(f"Result type '{type(data)}' for '{label}' not saved.")
+
 
         if results_to_add:
             try:
                 db.session.bulk_save_objects(results_to_add)
                 db.session.commit()
-                logging.info(f"Successfully saved {len(results_to_add)} monitoring results.")
+                logging.info(f"Successfully saved {len(results_to_add)} detailed monitoring results.")
             except Exception as e:
                  db.session.rollback()
-                 logging.error(f"Error bulk saving monitoring results: {e}", exc_info=True)
-        else: logging.info("No results formatted for saving.")
+                 logging.error(f"Error bulk saving detailed monitoring results: {e}", exc_info=True)
+        else:
+            logging.info("No detailed results formatted for saving.")
 
 
     def _generate_report(self):

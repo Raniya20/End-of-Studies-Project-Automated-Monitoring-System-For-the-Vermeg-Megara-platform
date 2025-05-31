@@ -16,7 +16,7 @@
             <div class="col-md-3 col-sm-6">
                 <label for="filter_scenario_id" class="form-label form-label-sm">Scenario:</label>
                 <select name="scenario_id" id="filter_scenario_id" class="form-select form-select-sm form-control-custom"> {# Added form-control-custom #}
-                    <option value="">-- All My Scenarios --</option>
+                    <option value=""> All My Scenarios </option>
                     {% for scenario in user_scenarios_for_filter %}
                         <option value="{{ scenario.scenario_id }}" {% if scenario.scenario_id|string == request.args.get('scenario_id')|string %}selected{% endif %}>
                             {{ scenario.name }}

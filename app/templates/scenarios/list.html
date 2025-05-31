@@ -61,14 +61,16 @@
                                     <td><span class="badge bg-light text-dark border">{{ scenario.schedule_cron }}</span></td>
                                     <td><small>{{ scenario.created_at.strftime('%Y-%m-%d') if scenario.created_at else 'N/A' }}</small></td>
                                     <td class="text-end">
-                                        <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-icon btn-sm btn-outline-secondary me-1" title="Edit">
-                                            <i class="fas fa-pencil-alt"></i>
-                                        </a>
-                                        <form action="{{ url_for('scenarios.delete_scenario', scenario_id=scenario.scenario_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete scenario \'{{ scenario.name }}\'?');">
-                                             <button type="submit" class="btn btn-icon btn-sm btn-outline-danger" title="Delete">
-                                                 <i class="fas fa-trash-alt"></i>
-                                             </button>
-                                        </form>
+                                        <div class="actions-container"></div>
+                                            <a href="{{ url_for('scenarios.edit_scenario', scenario_id=scenario.scenario_id) }}" class="btn btn-icon btn-sm btn-outline-secondary me-1" title="Edit">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </a>
+                                            <form action="{{ url_for('scenarios.delete_scenario', scenario_id=scenario.scenario_id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete scenario \'{{ scenario.name }}\'?');">
+                                                <button type="submit" class="btn btn-icon btn-sm btn-outline-danger" title="Delete">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}

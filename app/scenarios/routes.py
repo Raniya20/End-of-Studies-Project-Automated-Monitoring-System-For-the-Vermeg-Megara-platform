@@ -261,7 +261,7 @@ def edit_scenario(scenario_id):
             scenario.name = form.name.data
             scenario.megara_url = form.megara_url.data
             scenario.schedule_cron = form.schedule_cron.data
-            scenario.enable_anomalies = form.enable_anomalies.data
+            
             scenario.email_recipients = form.email_recipients.data
             scenario.upload_path = form.upload_path.data
             scenario.report_template_id = new_template_id # Assign new or existing template ID
@@ -280,7 +280,7 @@ def edit_scenario(scenario_id):
         form.name.data = scenario.name
         form.megara_url.data = scenario.megara_url
         form.schedule_cron.data = scenario.schedule_cron
-        form.enable_anomalies.data = scenario.enable_anomalies
+        
         form.email_recipients.data = scenario.email_recipients
         form.upload_path.data = scenario.upload_path
         form.custom_report_base_name.data = scenario.custom_report_base_name

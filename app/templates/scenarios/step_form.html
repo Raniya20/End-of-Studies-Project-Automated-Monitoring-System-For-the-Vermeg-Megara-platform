@@ -25,7 +25,7 @@
                     </div>
 
                     <div class="col-md-6 form-group-custom mb-3">
-                        {{ form.action_type.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.action_type.label(class="form-label-custom") }} <span class="text-danger-emphasis"></span>
                         {{ form.action_type(class="form-select-custom" + (" is-invalid" if form.action_type.errors else ""), required=True) }}
                         {% for error in form.action_type.errors %}
                             <div class="invalid-feedback d-block">{{ error }}</div>
@@ -35,7 +35,7 @@
 
                 <div class="row">
                     <div class="col-md-6 form-group-custom mb-3">
-                        {{ form.selector.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.selector.label(class="form-label-custom") }} <span class="text-danger-emphasis"></span>
                         {{ form.selector(class="form-control-custom" + (" is-invalid" if form.selector.errors else ""), required=True, placeholder="e.g., #element-id or //xpath") }}
                         {% if form.selector.description %}
                          <div class="form-text-custom">{{ form.selector.description }}</div>

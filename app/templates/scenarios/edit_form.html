@@ -16,13 +16,13 @@
                 {# Scenario Name and URL side-by-side #}
                 <div class="row">
                     <div class="col-md-6 form-group-custom mb-3">
-                        {{ form.name.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.name.label(class="form-label-custom") }} <span class="text-danger-emphasis"></span>
                         {{ form.name(class="form-control-custom" + (" is-invalid" if form.name.errors else ""), placeholder="Enter scenario name") }}
                         {% if form.name.description %}<div class="form-text-custom">{{ form.name.description }}</div>{% endif %}
                         {% for error in form.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="col-md-6 form-group-custom mb-3">
-                        {{ form.megara_url.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.megara_url.label(class="form-label-custom") }} <span class="text-danger-emphasis"></span>
                         {{ form.megara_url(class="form-control-custom" + (" is-invalid" if form.megara_url.errors else ""), placeholder="e.g., https://app.example.com") }}
                         {% if form.megara_url.description %}<div class="form-text-custom">{{ form.megara_url.description }}</div>{% endif %}
                         {% for error in form.megara_url.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
@@ -32,7 +32,7 @@
                 {# Schedule Cron and Custom Report Base Name side-by-side #}
                 <div class="row">
                     <div class="col-md-6 form-group-custom mb-3">
-                        {{ form.schedule_cron.label(class="form-label-custom") }} <span class="text-danger-emphasis">*</span>
+                        {{ form.schedule_cron.label(class="form-label-custom") }} <span class="text-danger-emphasis"></span>
                         {{ form.schedule_cron(class="form-control-custom" + (" is-invalid" if form.schedule_cron.errors else ""), placeholder="e.g., 0 8 * * *") }}
                         {% if form.schedule_cron.description %}<div class="form-text-custom">{{ form.schedule_cron.description }} See <a href="https://crontab.guru/" target="_blank">crontab.guru</a>.</div>{% endif %}
                         {% for error in form.schedule_cron.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}

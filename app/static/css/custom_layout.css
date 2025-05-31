@@ -378,7 +378,25 @@ body.sidebar-collapsed .sidebar-footer .logout-link i.fa-fw {
 .table-custom .text-decoration-none { color: var(--brand-red-accent-link); }
 .table-custom .text-decoration-none:hover { color: var(--brand-red-crimson); }
 .btn { font-family: var(--ui-font-sans-serif); font-size: var(--brand-button-font-size); font-weight: var(--brand-button-font-weight); letter-spacing: var(--brand-button-letter-spacing); padding: var(--brand-button-padding-y) var(--brand-button-padding-x); border-radius: var(--brand-radius-sm); text-transform: none; transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, filter 0.2s ease-in-out; }
-.btn-icon { /* Inherits from .btn */ }
+.btn-icon {
+  padding: 4px; /* Smaller padding */
+  margin: 2px;  /* Small spacing between buttons */
+  border: none; /* Remove border */
+  background: none; /* Optional: remove background */
+  box-shadow: none; /* Optional: remove shadow if inherited */
+  display: inline-flex; /* Keeps icon centered */
+  align-items: center;
+  justify-content: center;
+  width: 32px; /* Adjust width as needed */
+  height: 32px; /* Adjust height as needed */
+  cursor: pointer;
+}
+
+.actions-container {
+  display: flex;
+  gap: 4px; /* Controls spacing between edit/delete buttons */
+}
+
 .btn-outline-primary { color: var(--brand-red-accent-link); background-color: transparent; border: 1px solid var(--brand-red-accent-link); }
 .btn-outline-primary:hover { color: var(--brand-text-light); background-color: var(--brand-red-accent-link); border-color: var(--brand-red-accent-link); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .table-card-footer { padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color); background-color: var(--brand-background-light); }
@@ -473,4 +491,43 @@ body.sidebar-collapsed .sidebar-footer .logout-link i.fa-fw {
 /* Ensure your alert icon has the desired color */
 .alert.alert-info-custom i.fa-info-circle {
     color: var(--brand-red-accent-link); /* Or another suitable alert icon color from your theme */
+}
+
+
+.kpi-card {
+    border: 1px solid var(--border-color);
+    /* margin-bottom: 1rem; /* Use row mb-3 */
+}
+.kpi-card .card-body {
+    padding: 1rem;
+}
+.kpi-card .card-subtitle {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.kpi-card .card-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+.kpi-card .text-danger { /* For anomaly count */
+    color: var(--bs-danger) !important;
+}
+
+#anomaliesTable td, #anomaliesTable th {
+    font-size: 0.85rem; /* Smaller text for anomaly table */
+    padding: 0.5rem;
+}
+#anomaliesTable .text-danger { /* Highlight anomalous values in table */
+    color: var(--bs-danger) !important;
+}
+
+/* Ensure canvas container respects height */
+#chartContainer canvas {
+    width: 100% !important; /* Ensure canvas is responsive within its container */
+    /* height attribute on canvas tag sets initial aspect ratio, but maintainAspectRatio:false allows it to fill container */
+}
+#dimensionChartContainer canvas {
+    width: 100% !important;
+    height: 250px !important; /* Give it a fixed initial height or manage via container */
 }
