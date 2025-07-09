@@ -3,10 +3,10 @@ from flask import render_template, redirect, url_for, flash, current_app, reques
 from flask_login import login_required, current_user
 from sqlalchemy import desc, and_
 from datetime import datetime, date
-import os # For os.path.basename
+import os 
 import logging
 
-from app import db # Import logging
+from app import db 
 from app.reports import bp
 from app.models import Scenario, ExecutionLog, ExecutionStatusEnum
 
@@ -74,9 +74,7 @@ def my_reports():
         # --- End Apply Filters ---
 
 
-        # Order and Paginate (simple pagination for now)
-        # For proper pagination, use Flask-SQLAlchemy's .paginate()
-        # user_logs_with_reports = query.order_by(desc(ExecutionLog.end_time)).all()
+        # Order and Paginate 
         pagination = query.order_by(desc(ExecutionLog.end_time)).paginate(page=page, per_page=per_page, error_out=False)
         user_logs_with_reports = pagination.items
 

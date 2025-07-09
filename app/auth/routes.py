@@ -5,7 +5,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from app import db
 from app.auth import bp
 from app.models import Consultant
-from app.auth.forms import LoginForm, RegistrationForm # Import the new forms
+from app.auth.forms import LoginForm, RegistrationForm 
 import jwt
 from datetime import datetime, timezone
 from flask import jsonify, current_app, g
@@ -37,13 +37,11 @@ def login():
     # GET request or validation failed: Render the template with the form object
     return render_template('auth/login.html', title='Sign In', form=form)
 
-
-@bp.route('/logout') # No changes needed for logout
+@bp.route('/logout') 
 def logout():
     logout_user()
     flash('You have been logged out.', 'success')
     return redirect(url_for('index'))
-
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -68,7 +66,6 @@ def register():
     # GET request or validation failed: Render the template with the form object
     return render_template('auth/register.html', title='Register', form=form)
 
-# --- NEW: API Login Route ---
 @bp.route('/api/login', methods=['POST'])
 def api_login():
     """API endpoint for authenticating and issuing a JWT."""
@@ -102,4 +99,3 @@ def api_login():
     except Exception as e:
         logging.error(f"Error generating JWT for user {data['username']}: {e}", exc_info=True)
         return jsonify({"success": False, "message": "Token generation failed"}), 500
-# --- End API Login ---

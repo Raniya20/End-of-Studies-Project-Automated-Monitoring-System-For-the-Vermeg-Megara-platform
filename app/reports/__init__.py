@@ -3,4 +3,4 @@ from flask import Blueprint
 
 bp = Blueprint('reports', __name__, url_prefix='/reports')
 
-from app.reports import routes # Import routes last
+from app.reports import routes 

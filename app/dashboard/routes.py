@@ -3,33 +3,25 @@ import logging
 from datetime import datetime, timedelta, date, time as dt_time
 from flask import render_template, jsonify, request, abort, g
 from flask_login import login_required, current_user
-from sqlalchemy import desc, cast, Date, func, and_ # Ensure func, and_ are imported
-from collections import defaultdict # For grouping
+from sqlalchemy import desc, cast, Date, func, and_ 
+from collections import defaultdict 
 
 from app import db
 from app.dashboard import bp
 from app.models import Scenario, ExecutionLog, MonitoringResult, ExecutionStatusEnum
 
-# --- Constants (used for deriving features from MonitoringResult if not stored directly) ---
-# These should align with how your Runner saves metric_names.
-# Example: If a metric is saved as 'MainTable_ProcessA_Daily_0_ObservedDurationMetric'
-# and 'ProcessA' is what you want, you'll need to parse it.
-# If runner saves 'ProcessName' as a metric type, that's easier.
-# For this example, we'll do some basic parsing.
 
-# Define standard names for metrics that the API expects to find or derive
-# These are what the API will look for in MonitoringResult.metric_name (often as the last part)
 METRIC_NAME_OBSERVED_DURATION = 'ObservedDurationMetric'
-METRIC_NAME_COMMITMENT_HOUR = 'CommitmentHour_ModelInput' # As saved by runner from features
-METRIC_NAME_DAY_OF_WEEK = 'DayOfWeek_ModelInput'     # As saved by runner from features
-METRIC_NAME_PERIODICITY = 'Periodicity'             # As saved by runner from features
-METRIC_NAME_PROCESS_NAME = 'ProcessName'             # If saved as metric_type='ProcessName'
-METRIC_NAME_ORIGINAL_STATUS_D = 'OriginalStatusD'       # If saved as metric_type='OriginalStatusD'
-METRIC_NAME_TYPICAL_OK_DURATION = 'TypicalOKDuration'   # If saved as metric_type='TypicalOKDuration'
-METRIC_NAME_IS_ANOMALOUS_FLAG = 'IsAnomalousFlag'     # If saved as metric_type='IsAnomalousFlag'
+METRIC_NAME_COMMITMENT_HOUR = 'CommitmentHour_ModelInput' 
+METRIC_NAME_DAY_OF_WEEK = 'DayOfWeek_ModelInput'     
+METRIC_NAME_PERIODICITY = 'Periodicity'             
+METRIC_NAME_PROCESS_NAME = 'ProcessName'             
+METRIC_NAME_ORIGINAL_STATUS_D = 'OriginalStatusD'       
+METRIC_NAME_TYPICAL_OK_DURATION = 'TypicalOKDuration'   
+METRIC_NAME_IS_ANOMALOUS_FLAG = 'IsAnomalousFlag'     
 
 
-DEFAULT_DAYS_HISTORY = 1 # For "Today" view primarily
+DEFAULT_DAYS_HISTORY = 1 
 
 # --- Main Dashboard Page Route (Renders the HTML shell) ---
 @bp.route('/')
@@ -40,7 +32,7 @@ def index():
     return render_template(
         'dashboard/dashboard_overview.html',
         title="Daily Operations Health",
-        user_scenarios=user_scenarios # For the scenario filter dropdown
+        user_scenarios=user_scenarios 
     )
 
 # --- API Endpoint for Daily Operations Health Overview Data ---
@@ -55,7 +47,7 @@ def get_daily_operations_overview_data():
     except ValueError:
         return jsonify({"success": False, "message": "Invalid report_date format. Use YYYY-MM-DD."}), 400
 
-    selected_scenario_id_str = request.args.get('scenario_id') # Can be 'all' or an ID
+    selected_scenario_id_str = request.args.get('scenario_id') 
     
     start_of_day = datetime.combine(report_date, dt_time.min)
     end_of_day = datetime.combine(report_date, dt_time.max)

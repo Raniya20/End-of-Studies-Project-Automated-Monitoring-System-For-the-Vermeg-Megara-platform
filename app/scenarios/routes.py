@@ -1,7 +1,7 @@
 # app/scenarios/routes.py
 from flask import (render_template, redirect, url_for, flash, request,
                    current_app, jsonify, g, send_from_directory)
-from flask_login import login_required, current_user # Import login_required, current_user
+from flask_login import login_required, current_user 
 from app import db
 from app.scenarios import bp
 from app.models import (Scenario, Consultant, ScenarioStep, ActionTypeEnum,
@@ -13,16 +13,16 @@ import openpyxl
 from sqlalchemy import func
 import logging
 from flask import request, jsonify
-import uuid # For generating unique filenames
-from werkzeug.utils import secure_filename # For sanitizing filenames
-from flask import current_app # To access app.config and app.instance_path
+import uuid 
+from werkzeug.utils import secure_filename 
+from flask import current_app 
 from .utils import get_excel_headers
 from flask import request, jsonify, g 
 from app.auth.decorators import token_required
 
 # --- Routes ---
 
-# --- NEW HELPER FUNCTION ---
+
 def get_template_headers(template_path):
     """Reads the first row from an Excel file to get headers."""
     headers = []
@@ -47,7 +47,7 @@ def get_template_headers(template_path):
 @login_required # Protect this route
 def list_scenarios():
     page = request.args.get('page', 1, type=int)
-    per_page = 15 # Or get from config/user preference later
+    per_page = 15 
     search_term = request.args.get('search', '').strip()
 
     query = Scenario.query.filter_by(created_by_user_id=current_user.user_id)
@@ -70,8 +70,7 @@ def list_scenarios():
         title='My Monitoring Scenarios',
         scenarios=scenarios,
         pagination=pagination,
-        # Pass search_term back to pre-fill form
-        search_term=search_term # Use this in template: value="{{ search_term or '' }}"
+        search_term=search_term 
     )
 @bp.route('/<int:scenario_id>')
 @login_required
@@ -164,7 +163,6 @@ def create_scenario():
                 schedule_cron=form.schedule_cron.data,
                 created_by_user_id=current_user.user_id,
                 report_template_id=template_record.template_id, # Link to the uploaded template
-                # Other fields like enable_anomalies will default or be set later
                 custom_report_base_name=form.custom_report_base_name.data or None 
             )
             db.session.add(new_scenario)
@@ -187,11 +185,11 @@ def create_scenario():
     # --- Handle GET Request ---
     return render_template('scenarios/create_scenario_form.html', title='Create New Scenario', form=form)
 
-# --- NEW: Recording Guidance Route ---
+# --- Recording Guidance Route ---
 @bp.route('/<int:scenario_id>/record-guidance')
 @login_required
 def start_recording_guidance(scenario_id):
-    scenario = db.session.get(Scenario, scenario_id) # Use db.session.get for simplicity
+    scenario = db.session.get(Scenario, scenario_id) 
     if not scenario or scenario.created_by_user_id != current_user.user_id:
         flash("Scenario not found or permission denied.", "danger")
         return redirect(url_for('scenarios.list_scenarios'))
@@ -237,8 +235,6 @@ def edit_scenario(scenario_id):
                 logging.info(f"Uploaded template saved to: {save_path}")
 
                 # --- Create new ReportTemplate record ---
-                # Decide: Delete old template record/file? For simplicity, let's just create a new one.
-                # Old template records/files might become orphaned if not cleaned up.
                 new_template = ReportTemplate(
                     original_filename=original_filename,
                     file_path=save_path # Store the absolute save path
@@ -284,7 +280,7 @@ def edit_scenario(scenario_id):
         form.email_recipients.data = scenario.email_recipients
         form.upload_path.data = scenario.upload_path
         form.custom_report_base_name.data = scenario.custom_report_base_name
-        # Don't pre-populate file field
+        
 
     # Pass current template info for display
     current_template_filename = scenario.template.original_filename if scenario.template else None
@@ -292,7 +288,7 @@ def edit_scenario(scenario_id):
                            form=form, scenario=scenario, current_template=current_template_filename)
        
 
-@bp.route('/<int:scenario_id>/delete', methods=['POST']) # Use POST for deletion
+@bp.route('/<int:scenario_id>/delete', methods=['POST']) 
 @login_required
 def delete_scenario(scenario_id):
     """Handles deletion of a scenario."""
@@ -317,7 +313,7 @@ def delete_scenario(scenario_id):
     return redirect(url_for('scenarios.list_scenarios'))
 
 
-# --- NEW ROUTE: Add Processing Rule ---
+# --- Add Processing Rule ---
 @bp.route('/<int:scenario_id>/rules/add', methods=['POST'])
 @login_required
 def add_rule(scenario_id):
@@ -365,7 +361,7 @@ def add_rule(scenario_id):
     return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))
 
 
-# --- NEW ROUTE: Delete Processing Rule ---
+# --- Delete Processing Rule ---
 @bp.route('/<int:scenario_id>/rules/<int:rule_id>/delete', methods=['POST'])
 @login_required
 def delete_rule(scenario_id, rule_id):
@@ -391,7 +387,7 @@ def delete_rule(scenario_id, rule_id):
     return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))
 
 
-# --- NEW ROUTE: Add Column Mapping ---
+# --- Add Column Mapping ---
 @bp.route('/<int:scenario_id>/mappings/add', methods=['POST'])
 @login_required
 def add_mapping(scenario_id):
@@ -434,7 +430,7 @@ def add_mapping(scenario_id):
     return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))
 
 
-# --- NEW ROUTE: Delete Column Mapping ---
+# --- Delete Column Mapping ---
 @bp.route('/<int:scenario_id>/mappings/<int:mapping_id>/delete', methods=['POST'])
 @login_required
 def delete_mapping(scenario_id, mapping_id):
@@ -460,7 +456,7 @@ def delete_mapping(scenario_id, mapping_id):
     return redirect(url_for('scenarios.view_scenario', scenario_id=scenario.scenario_id))
 
 
-# --- NEW ROUTE: Add Scenario Step ---
+# --- Add Scenario Step ---
 
 @bp.route('/<int:scenario_id>/steps/add', methods=['GET', 'POST'])
 @login_required
@@ -517,7 +513,7 @@ def add_step(scenario_id):
                            is_edit=False,
                            form_action=url_for('scenarios.add_step', scenario_id=scenario.scenario_id))
 
-# --- NEW ROUTE: Edit Scenario Step ---
+# --- Edit Scenario Step ---
 @bp.route('/<int:scenario_id>/steps/<int:step_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_step(scenario_id, step_id):
@@ -540,9 +536,6 @@ def edit_step(scenario_id, step_id):
             original_order = step.sequence_order
             new_order = form.sequence_order.data
             if original_order != new_order:
-                # TODO: Implement robust re-ordering logic here.
-                # This would involve querying for conflicts and shifting other steps.
-                # For now, we just log a warning if changed, but allow it.
                 logging.warning(f"Sequence order changed for step {step_id} from {original_order} to {new_order}. Re-ordering logic not implemented.")
                 flash("Warning: Changing sequence order manually may lead to conflicts. Full re-ordering feature not yet implemented.", "warning")
 
@@ -565,15 +558,6 @@ def edit_step(scenario_id, step_id):
             logging.error(f"Error updating step {step_id}: {e}", exc_info=True)
             # Fall through to render form again with errors
 
-    # --- Handle GET Request (or failed POST validation) ---
-    # Pre-population is handled by obj=step when form is instantiated above GET/POST check
-    # OR: If not using obj=, you would manually set here:
-    # if request.method == 'GET':
-    #     form.sequence_order.data = step.sequence_order
-    #     form.action_type.data = step.action_type.name # Use enum name for SelectField
-    #     form.selector.data = step.selector
-    #     form.value.data = step.value
-
     # Render the form template
     return render_template('scenarios/step_form.html',
                            title=f'Edit Step {step.sequence_order} in Scenario: {scenario.name}',
@@ -585,8 +569,7 @@ def edit_step(scenario_id, step_id):
 
 
 
-# --- Route for delete_step to be added next ---
-# --- NEW ROUTE: Delete Scenario Step ---
+# --- Delete Scenario Step ---
 @bp.route('/<int:scenario_id>/steps/<int:step_id>/delete', methods=['POST']) # Only allow POST for deletion
 @login_required
 def delete_step(scenario_id, step_id):
@@ -602,8 +585,6 @@ def delete_step(scenario_id, step_id):
     try:
         step_order = step.sequence_order # Get order before deleting for message
         db.session.delete(step)
-        # TODO: Consider logic to re-sequence remaining steps after deletion?
-        # For now, just delete the specific step.
         db.session.commit()
         flash(f'Step {step_order} deleted successfully!', 'success')
     except Exception as e:
@@ -616,7 +597,6 @@ def delete_step(scenario_id, step_id):
 
 # --- PROTECTED API ROUTE: Add Step ---
 @bp.route('/api/scenarios/<int:scenario_id>/steps', methods=['POST'])
-# @login_required # Remove this
 @token_required # Use the JWT token decorator
 def api_add_step(scenario_id):
     """
@@ -626,7 +606,6 @@ def api_add_step(scenario_id):
     """
     user = g.current_user # User object set by @token_required decorator
     if not user:
-        # This should theoretically be caught by @token_required, but defensive check
         return jsonify({"success": False, "message": "Authentication token invalid or user not found"}), 401
 
     scenario = db.session.get(Scenario, scenario_id)
@@ -646,18 +625,16 @@ def api_add_step(scenario_id):
     selector = data.get('selector') # For desktop, this will be JSON string of criteria
     value = data.get('value')       # Can be None for certain actions
 
-    # --- Get mapping information ---
-    # The extension might send one or the other, or neither
-    # mapping_target_header = data.get('mapping_target_header')
+    
     mapping_target_cell = data.get('mapping_target_cell')
-    # --- End mapping information ---
+    
 
 
     # Validate required fields
     if not action_str:
          return jsonify({"success": False, "message": "Missing 'action_type'"}), 400
     # Selector is not strictly required for all actions (e.g., WAIT_FOR_TIMEOUT, or NAVIGATE to a fixed URL)
-    # but the form usually enforces it. We can add more specific validation if needed.
+    # but the form usually enforces it. 
     if not selector and action_str not in ['WAIT_FOR_TIMEOUT', 'NAVIGATE']: # Adjust as needed
          logging.warning(f"API: Adding step with action '{action_str}' but no selector provided.")
          # For NAVIGATE, if selector is empty, the runner uses scenario.megara_url or step.value if provided
@@ -681,13 +658,11 @@ def api_add_step(scenario_id):
             action_type=action_enum,
             selector=selector if selector is not None else "", # Ensure selector is string, even if empty
             value=value,
-            #mapping_target_header=mapping_target_header,
             mapping_target_cell=mapping_target_cell
         )
         db.session.add(new_step)
         db.session.commit()
 
-        #logging.info(f"API: Step {next_order} (ID: {new_step.step_id}) added to scenario {scenario_id} for user {user.user_id}. "f"Mapping Header: {mapping_target_header}, Mapping Cell: {mapping_target_cell}")
 
         # Return success and the details of the created step
         return jsonify({
@@ -700,7 +675,6 @@ def api_add_step(scenario_id):
                 "action_type": new_step.action_type.name, # Send enum name
                 "selector": new_step.selector,
                 "value": new_step.value,
-                #"mapping_target_header": new_step.mapping_target_header,
                 "mapping_target_cell": new_step.mapping_target_cell,
                 "created_at": new_step.created_at.isoformat() if new_step.created_at else None
             }
@@ -713,13 +687,12 @@ def api_add_step(scenario_id):
 
 # --- PROTECTED API ROUTE: List Scenarios ---
 @bp.route('/api/scenarios/list', methods=['GET'])
-# @login_required # Remove this (or ensure it was added back)
 @token_required # Use the JWT token decorator
 def api_list_scenarios():
     """API endpoint to list scenarios owned by the JWT-authenticated user."""
     # Access user from g instead of current_user
     user = g.current_user
-    if not user: # Should not happen if decorator works, but good practice
+    if not user: 
         return jsonify({"success": False, "message": "Authentication failed"}), 401
     try:
         scenarios = Scenario.query.filter_by(created_by_user_id=user.user_id).order_by(Scenario.name).all()

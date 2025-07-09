@@ -21,11 +21,6 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-4 col-sm-12 d-flex align-items-end">
-            <button id="refreshDashboardButton" class="btn btn-primary-custom btn-sm w-100">
-                <i class="fas fa-sync-alt me-1"></i>Refresh Data
-            </button>
-        </div>
     </div>
 
     {# --- KPIs Section --- #}
@@ -183,14 +178,12 @@
 
         let headerRow = tableHead.insertRow();
         headerRow.classList.add('table-light');
-        // Create th elements for better control over attributes
         let th1 = document.createElement('th'); th1.textContent = "Process Name"; headerRow.appendChild(th1);
         let th2 = document.createElement('th'); th2.textContent = "Status"; th2.classList.add('text-center'); headerRow.appendChild(th2);
         let th3 = document.createElement('th'); th3.textContent = "Observed (min)"; th3.classList.add('text-center'); headerRow.appendChild(th3);
         let th4 = document.createElement('th'); th4.textContent = "Typical (min)"; th4.classList.add('text-center'); headerRow.appendChild(th4);
         let th5 = document.createElement('th'); th5.textContent = "Exceeded By (min)"; th5.classList.add('text-center', 'text-danger'); headerRow.appendChild(th5);
         let th6 = document.createElement('th'); th6.textContent = "P(Normal)"; th6.classList.add('text-center'); headerRow.appendChild(th6);
-
 
         if (anomalies && anomalies.length > 0) {
             noDataMsg.style.display = 'none';
@@ -208,7 +201,7 @@
                 }
 
                 row.insertCell().textContent = anomaly.observed_duration_min;
-                row.cells[2].classList.add('text-center'); // Indexing cells after creation
+                row.cells[2].classList.add('text-center');
                 row.insertCell().textContent = anomaly.typical_completion_min;
                 row.cells[3].classList.add('text-center');
                 let exceededCell = row.insertCell();
@@ -239,10 +232,9 @@
         ths.forEach((text, index) => {
             let th = document.createElement('th');
             th.textContent = text;
-            if(thClasses[index]) th.className = thClasses[index]; // Apply classes
+            if(thClasses[index]) th.className = thClasses[index];
             headerRow.appendChild(th);
         });
-
 
         if (anomalies && anomalies.length > 0) {
             noDataMsg.style.display = 'none';
@@ -270,7 +262,7 @@
 
     function updateDimensionRateChart(dimensionKey, dimensionDisplayName) {
         const ctx = document.getElementById('dimensionRateChart')?.getContext('2d');
-        const chartTitleEl = document.getElementById('dimensionChartTitle'); // Title for the card
+        const chartTitleEl = document.getElementById('dimensionChartTitle');
         if (!ctx) {
             console.error("dimensionRateChart canvas not found");
             return;
@@ -280,10 +272,9 @@
             dimensionRateChartInstance.destroy();
         }
         
-        // Use the globally stored mock data
         const chartData = currentMockData?.anomaly_rates_by_dimension?.[dimensionKey] || {labels: [], data: []};
 
-        if (chartTitleEl) { // Keep card title general
+        if (chartTitleEl) {
             chartTitleEl.textContent = `Anomaly Rate`;
         }
 
@@ -292,9 +283,9 @@
             data: {
                 labels: chartData.labels && chartData.labels.length > 0 ? chartData.labels : ['No Data Available'],
                 datasets: [{
-                    label: `Anomaly Rate by ${dimensionDisplayName} (%)`, // More specific label for dataset
+                    label: `Anomaly Rate by ${dimensionDisplayName} (%)`,
                     data: chartData.data && chartData.data.length > 0 ? chartData.data : [0],
-                    backgroundColor: 'rgba(75, 192, 192, 0.7)', // Teal color
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
                     borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 1
                 }]
@@ -302,17 +293,17 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y', // For horizontal bar chart
+                indexAxis: 'y',
                 plugins: {
                     legend: {
-                        display: true, // Display legend as it now has dataset label
+                        display: true,
                         position: 'top',
                     },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
-                                if (label.includes('%')) { // If label already has %, don't add another
+                                if (label.includes('%')) {
                                      label = label.replace(' (%)','');
                                 }
                                 if (label) { label += ': '; }
@@ -325,7 +316,7 @@
                 scales: {
                     x: {
                         beginAtZero: true,
-                        max: 100, // Assuming rate is a percentage
+                        max: 100,
                         title: {
                             display: true,
                             text: 'Anomaly Rate (%)'
@@ -350,82 +341,46 @@
     async function fetchAndDisplayOverviewData() {
         const reportDate = document.getElementById('reportDateFilter').value;
         const scenarioId = document.getElementById('scenarioDashboardSelect').value;
-        // Dimension for chart is now handled by its own select listener
-        const refreshButton = document.getElementById('refreshDashboardButton');
-
+        
         document.getElementById('dashboardPageTitle').textContent = "Daily Operations Health (Loading...)";
-        if (refreshButton) refreshButton.disabled = true;
 
         const USE_MOCK_DATA = true;
 
         if (USE_MOCK_DATA) {
-            currentMockData = { // Store mock data globally for chart updates
-                "kpis": {
-                  "overall_health_status": "RED",
-                  "anomaly_rate_today": 25.0,
-                  "anomalies_today_count": 5,
-                  "total_processes_monitored": 20
-                },
-                "todays_anomalies_by_lateness": [
-                  {"process_name": "Recepción de ficheros de AC_RF", "status_d_original": "PDTE", "observed_duration_min": 180, "typical_completion_min": 19, "exceeded_by_min": 160, "probability_normal": "2.15%"},
-                  {"process_name": "Daily Contractos WA was executed", "status_d_original": "PDTE", "observed_duration_min": 150, "typical_completion_min": 60, "exceeded_by_min": 89, "probability_normal": "8.00%"},
-                  {"process_name": "FX Rate Migration", "status_d_original": "PDTE", "observed_duration_min": 95, "typical_completion_min": 25, "exceeded_by_min": 69, "probability_normal": "10.50%"},
-                  {"process_name": "Management Fees Calculation", "status_d_original": "OK", "observed_duration_min": 70, "typical_completion_min": 20, "exceeded_by_min": 49, "probability_normal": "15.00%"},
-                  {"process_name": "Derivative Price Control Process", "status_d_original": "OK", "observed_duration_min": 45, "typical_completion_min": 5, "exceeded_by_min": 39, "probability_normal": "12.00%"}
-                ].sort((a, b) => b.exceeded_by_min - a.exceeded_by_min),
-                "critical_pending_anomalies": [
-                  {"scenario_name": "Daily Compliance Checks", "process_name": "Recepción de ficheros de AC_RF", "pending_duration_min": "180", "typical_completion_min": "19", "exceeded_by_min": "160", "probability_normal": "2.15%", "status_d_minus_1": "OK"},
-                  {"scenario_name": "Daily FX Processing", "process_name": "FX Rate Migration", "pending_duration_min": "95", "typical_completion_min": "25", "exceeded_by_min": "69", "probability_normal": "10.50%", "status_d_minus_1": "PDTE"},
-                  {"scenario_name": "Morning Batch", "process_name": "Daily Contractos WA was executed", "pending_duration_min": "150", "typical_completion_min": "60", "exceeded_by_min": "89", "probability_normal": "8.00%", "status_d_minus_1": "OK"}
-                ].sort((a, b) => b.exceeded_by_min - a.exceeded_by_min),
-                "anomaly_rates_by_dimension": {
-                  "CommitmentHour": {"labels": ["00","08","10","13","17","18","21"],"data": [10.0,15.0,25.0,12.0,30.0,20.0,22.0]},
-                  "DayOfWeek": {"labels": ["Mon","Tue","Wed","Thu","Fri"],"data": [20.0,22.5,18.0,16.0,15.0,0.0,0.0]}, // Assuming Sat/Sun have 0
-                  "Periodicity": {"labels": ["Daily","Monthly","Weekly(Monday)"],"data": [18.5,25.0,5.0]},
-                  "SubAxis": {"labels": ["Prices", "Automatic Jobs", "WA", "Business Date"], "data": [22.0, 15.0, 10.0, 2.0]}
-                }
+            currentMockData = {
+                "kpis": { "overall_health_status": "RED", "anomaly_rate_today": 25.0, "anomalies_today_count": 5, "total_processes_monitored": 20 },
+                "todays_anomalies_by_lateness": [ {"process_name": "Recepción de ficheros de AC_RF", "status_d_original": "PDTE", "observed_duration_min": 180, "typical_completion_min": 19, "exceeded_by_min": 160, "probability_normal": "2.15%"}, {"process_name": "Daily Contractos WA was executed", "status_d_original": "PDTE", "observed_duration_min": 150, "typical_completion_min": 60, "exceeded_by_min": 89, "probability_normal": "8.00%"}, {"process_name": "FX Rate Migration", "status_d_original": "PDTE", "observed_duration_min": 95, "typical_completion_min": 25, "exceeded_by_min": 69, "probability_normal": "10.50%"}, {"process_name": "Management Fees Calculation", "status_d_original": "OK", "observed_duration_min": 70, "typical_completion_min": 20, "exceeded_by_min": 49, "probability_normal": "15.00%"}, {"process_name": "Derivative Price Control Process", "status_d_original": "OK", "observed_duration_min": 45, "typical_completion_min": 5, "exceeded_by_min": 39, "probability_normal": "12.00%"} ].sort((a, b) => b.exceeded_by_min - a.exceeded_by_min),
+                "critical_pending_anomalies": [ {"scenario_name": "Daily Compliance Checks", "process_name": "Recepción de ficheros de AC_RF", "pending_duration_min": "180", "typical_completion_min": "19", "exceeded_by_min": "160", "probability_normal": "2.15%", "status_d_minus_1": "OK"}, {"scenario_name": "Daily FX Processing", "process_name": "FX Rate Migration", "pending_duration_min": "95", "typical_completion_min": "25", "exceeded_by_min": "69", "probability_normal": "10.50%", "status_d_minus_1": "PDTE"}, {"scenario_name": "Morning Batch", "process_name": "Daily Contractos WA was executed", "pending_duration_min": "150", "typical_completion_min": "60", "exceeded_by_min": "89", "probability_normal": "8.00%", "status_d_minus_1": "OK"} ].sort((a, b) => b.exceeded_by_min - a.exceeded_by_min),
+                "anomaly_rates_by_dimension": { "CommitmentHour": {"labels": ["00","08","10","13","17","18","21"],"data": [10.0,15.0,25.0,12.0,30.0,20.0,22.0]}, "DayOfWeek": {"labels": ["Mon","Tue","Wed","Thu","Fri"],"data": [20.0,22.5,18.0,16.0,15.0,0.0,0.0]}, "Periodicity": {"labels": ["Daily","Monthly","Weekly(Monday)"],"data": [18.5,25.0,5.0]}, "SubAxis": {"labels": ["Prices", "Automatic Jobs", "WA", "Business Date"], "data": [22.0, 15.0, 10.0, 2.0]} }
             };
 
             updateKpisOverview(currentMockData.kpis);
             updateTodaysAnomaliesByLateness(currentMockData.todays_anomalies_by_lateness);
             updateCriticalPendingTable(currentMockData.critical_pending_anomalies);
             
-            // Initial chart load based on default select value
             const initialDimensionKey = document.getElementById('dimensionSelectChart').value;
             const initialDimensionDisplayName = document.getElementById('dimensionSelectChart').options[document.getElementById('dimensionSelectChart').selectedIndex].text;
             updateDimensionRateChart(initialDimensionKey, initialDimensionDisplayName.replace('by ', ''));
 
-
             document.getElementById('dashboardPageTitle').textContent = "Daily Operations Health ";
-            if (refreshButton) refreshButton.disabled = false;
             return;
         }
         // --- Actual API call logic would go here ---
-        // ...
-        // finally {
-        //     if (refreshButton) refreshButton.disabled = false;
-        // }
     }
 
     // Event listeners
     document.getElementById('reportDateFilter').addEventListener('change', fetchAndDisplayOverviewData);
     document.getElementById('scenarioDashboardSelect').addEventListener('change', fetchAndDisplayOverviewData);
-    document.getElementById('refreshDashboardButton').addEventListener('click', fetchAndDisplayOverviewData);
     
-    // Listener for the dimension chart dropdown
     document.getElementById('dimensionSelectChart').addEventListener('change', function() {
         const selectedDimensionKey = this.value;
         const selectedDimensionDisplayName = this.options[this.selectedIndex].text;
-        if(currentMockData) { // Ensure mock data is loaded before trying to update chart
+        if(currentMockData) {
             updateDimensionRateChart(selectedDimensionKey, selectedDimensionDisplayName.replace('by ', ''));
         } else {
-            // Optionally, you could trigger a full data refresh here if API is used
-            // fetchAndDisplayOverviewData(); 
-            // Or just log that data isn't ready if it should be
             console.warn("Dimension changed, but mock/API data not yet loaded.");
         }
     });
-
 
     // Initial load
     document.addEventListener('DOMContentLoaded', () => {

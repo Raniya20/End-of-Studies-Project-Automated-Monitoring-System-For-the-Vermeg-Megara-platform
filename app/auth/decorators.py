@@ -2,7 +2,7 @@
 import jwt
 from functools import wraps
 from flask import request, jsonify, current_app, g
-from app.models import Consultant # Import Consultant model
+from app.models import Consultant 
 import logging
 
 def token_required(f):

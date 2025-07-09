@@ -30,14 +30,14 @@
                 <li class="sidebar-item {% if request.endpoint.startswith('scenarios.') and 'list' in request.endpoint %}active{% endif %}">
                     <a href="{{ url_for('scenarios.list_scenarios') }}" class="sidebar-link">
                         <i class="fas fa-list-alt fa-fw me-2"></i>
-                        <span>My Scenarios</span>
+                        <span>Scenarios</span>
                         {# <i class="fas fa-angle-right ms-auto"></i> #} 
                     </a>
                 </li>
                 <li class="sidebar-item {% if request.endpoint == 'scenarios.create_scenario' %}active{% endif %}">
                     <a href="{{ url_for('scenarios.create_scenario') }}" class="sidebar-link">
                         <i class="fas fa-plus-square fa-fw me-2"></i>
-                        <span>Add New Scenario</span>
+                        <span>Add Scenario</span>
                     </a>
                 </li>
                 <li class="sidebar-item {% if request.endpoint.startswith('dashboard.') %}active{% endif %}">
@@ -49,7 +49,7 @@
                 <li class="sidebar-item {% if request.endpoint == 'reports.my_reports' %}active{% endif %}">
                     <a href="{{ url_for('reports.my_reports') }}" class="sidebar-link">
                         <i class="fas fa-file-excel fa-fw me-2"></i>
-                        <span>My Reports</span>
+                        <span>Reports</span>
                     </a>
                 </li>
                 

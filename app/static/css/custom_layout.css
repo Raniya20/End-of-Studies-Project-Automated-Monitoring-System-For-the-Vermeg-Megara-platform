@@ -531,3 +531,10 @@ body.sidebar-collapsed .sidebar-footer .logout-link i.fa-fw {
     width: 100% !important;
     height: 250px !important; /* Give it a fixed initial height or manage via container */
 }
+
+#refreshDashboardButton {
+    /* Set a fixed width equal to the button's height to make it square */
+    width: 38px !important; 
+    padding-left: 0.5rem;  /* Adjust padding if needed */
+    padding-right: 0.5rem; /* to center the icon */
+}

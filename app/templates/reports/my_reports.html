@@ -6,16 +6,17 @@
     {# --- Page Header: Title and Filters --- #}
     <div class="row mb-3 align-items-center page-controls-header">
         <div class="col-md-12"> {# Title takes full width if no action button on this page #}
-            <h2 class="page-main-title mb-0">My Generated Reports</h2>
+            <h2 class="page-main-title mb-0">Reports</h2>
         </div>
     </div>
 
     {# --- Filter Form (moved above the card) --- #}
-    <form method="GET" action="{{ url_for('reports.my_reports') }}" class="mb-4 p-3 border rounded bg-light shadow-sm filter-form">
+    {# CHANGE 1: Added id="reportsFilterForm" to the form tag #}
+    <form method="GET" action="{{ url_for('reports.my_reports') }}" id="reportsFilterForm" class="mb-4 p-3 border rounded bg-light shadow-sm filter-form">
         <div class="row g-3 align-items-end">
             <div class="col-md-3 col-sm-6">
                 <label for="filter_scenario_id" class="form-label form-label-sm">Scenario:</label>
-                <select name="scenario_id" id="filter_scenario_id" class="form-select form-select-sm form-control-custom"> {# Added form-control-custom #}
+                <select name="scenario_id" id="filter_scenario_id" class="form-select form-select-sm form-control-custom">
                     <option value=""> All My Scenarios </option>
                     {% for scenario in user_scenarios_for_filter %}
                         <option value="{{ scenario.scenario_id }}" {% if scenario.scenario_id|string == request.args.get('scenario_id')|string %}selected{% endif %}>
@@ -28,30 +29,25 @@
                 <label for="filter_report_name" class="form-label form-label-sm">Report Name Contains:</label>
                 <input type="text" name="report_name" id="filter_report_name" class="form-control form-control-sm form-control-custom" value="{{ filter_report_name or '' }}">
             </div>
-            <div class="col-md-2 col-sm-6">
+            <div class="col-md-3 col-sm-6"> {# Adjusted width from md-2 to md-3 #}
                 <label for="filter_start_date" class="form-label form-label-sm">From Date:</label>
                 <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm form-control-custom" value="{{ filter_start_date or '' }}">
             </div>
-            <div class="col-md-2 col-sm-6">
+            <div class="col-md-3 col-sm-6"> {# Adjusted width from md-2 to md-3 #}
                 <label for="filter_end_date" class="form-label form-label-sm">To Date:</label>
                 <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm form-control-custom" value="{{ filter_end_date or '' }}">
             </div>
-            <div class="col-md-2 col-sm-12"> {# Full width on small screens for button #}
-                <button type="submit" class="btn btn-primary-custom btn-sm w-100">Filter Reports</button>
-            </div>
+            
+            {# CHANGE 2: The "Filter Reports" button has been removed as it is no longer needed. #}
+            {# The layout columns for the date pickers above have been slightly widened to fill the space. #}
+
         </div>
     </form>
     {# --- End Filter Form --- #}
 
 
     <div class="card table-card shadow-sm">
-        {# Optional Card Header - Can be removed if not needed #}
-        {#
-        <div class="card-header table-card-header">
-             <h5 class="mb-0">Report List</h5>
-        </div>
-        #}
-        <div class="card-body p-0"> {# Remove padding for full-width table #}
+        <div class="card-body p-0">
             {% if reports %}
                 <div class="table-responsive">
                     <table class="table table-hover table-custom mb-0">
@@ -77,7 +73,6 @@
                                         <a href="{{ url_for('scenarios.download_report', log_id=report_info.log_id) }}" class="btn btn-icon btn-sm btn-outline-primary" title="Download Report" target="_blank">
                                             <i class="fas fa-download"></i>
                                         </a>
-                                        {# Add other actions like "View Details" if needed #}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -98,17 +93,16 @@
             {% endif %}
         </div> {# End card-body #}
 
-        {# --- Pagination (keep as before) --- #}
+        {# --- Pagination --- #}
         {% if pagination and (pagination.has_prev or pagination.has_next or pagination.pages > 1) %}
         <div class="card-footer table-card-footer bg-light">
              <div class="row align-items-center">
-                <div class="col-md-6 text-muted small"> {# Adjusted columns for better balance #}
+                <div class="col-md-6 text-muted small">
                     Page {{ pagination.page }} of {{ pagination.pages }}. ({{ pagination.total }} total reports)
                 </div>
-                <div class="col-md-6 d-flex justify-content-md-end"> {# Adjusted columns #}
+                <div class="col-md-6 d-flex justify-content-md-end">
                     <nav aria-label="Report navigation">
                         <ul class="pagination pagination-sm mb-0">
-                            {# ... (pagination links as before, ensure filter params are included) ... #}
                             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
                                 <a class="page-link" href="{{ url_for('reports.my_reports', page=pagination.prev_num, scenario_id=request.args.get('scenario_id'), report_name=request.args.get('report_name'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) if pagination.has_prev else '#' }}">«</a>
                             </li>
@@ -136,4 +130,49 @@
 
     </div> {# End table-card #}
 </div>
+{% endblock %}
+
+{# CHANGE 3: Added JavaScript block for automatic form submission #}
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the form element by its new ID
+    const filterForm = document.getElementById('reportsFilterForm');
+
+    // Get all the filter inputs that should trigger a submit on 'change'
+    const autoSubmitInputs = [
+        document.getElementById('filter_scenario_id'),
+        document.getElementById('filter_start_date'),
+        document.getElementById('filter_end_date')
+    ];
+
+    // Get the text input, which we'll handle when 'Enter' is pressed
+    const reportNameInput = document.getElementById('filter_report_name');
+
+    // If the form exists, add the event listeners
+    if (filterForm) {
+        
+        // For dropdowns and date pickers, submit the form as soon as they change.
+        autoSubmitInputs.forEach(input => {
+            if (input) {
+                input.addEventListener('change', function() {
+                    filterForm.submit();
+                });
+            }
+        });
+
+        // For the text input, submit the form when the user presses 'Enter'.
+        if (reportNameInput) {
+            reportNameInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    // Prevent the default browser action and submit our form
+                    event.preventDefault();
+                    filterForm.submit();
+                }
+            });
+        }
+    }
+});
+</script>
 {% endblock %}

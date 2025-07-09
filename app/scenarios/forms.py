@@ -1,33 +1,32 @@
 # app/scenarios/forms.py
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed, FileRequired # Import FileField and validators
+from flask_wtf.file import FileField, FileAllowed, FileRequired 
 from wtforms import StringField, TextAreaField, BooleanField, SubmitField, SelectField, IntegerField
-from wtforms.validators import DataRequired, URL, Optional, Length, NumberRange, Regexp # Use Optional for fields not required on edit
-# Import the Enum for the dropdown choices
+from wtforms.validators import DataRequired, URL, Optional, Length, NumberRange, Regexp 
 from app.models import ActionTypeEnum, RuleOperatorEnum
 
 class EditScenarioForm(FlaskForm):
     name = StringField('Scenario Name', validators=[DataRequired()])
     megara_url = StringField('Megara Target URL', validators=[DataRequired(), URL(message='Please enter a valid URL.',require_tld=False)])
-    schedule_cron = StringField('Schedule (Cron Format)', validators=[DataRequired()],
+    schedule_cron = StringField('Schedule ', validators=[DataRequired()],
                                 description='Use standard cron format (minute hour day-of-month month day-of-week)')
-    email_recipients = TextAreaField('Email Recipients (comma-separated)', validators=[Optional()],
+    email_recipients = TextAreaField('Email Recipients ', validators=[Optional()],
                                      description='Enter email addresses separated by commas.')
     upload_path = StringField('Report Upload Path', validators=[Optional()],
                               description='Server path where reports should be uploaded (optional).')
     template_file = FileField(
-        'Upload New Template (.xlsx)',
+        'Upload New Template ',
         validators=[
             Optional(), # Make upload optional during edit
             FileAllowed(['xlsx'], 'Excel files (.xlsx) only!')
         ],
         description="Optional: Upload a new template to replace the existing one."
     )
-    # --- END NEW FILE FIELD ---
+    
     submit = SubmitField('Update Scenario')
 
     custom_report_base_name = StringField(
-        'Custom Report Base Name (Optional)',
+        'Custom Report Base Name ',
         validators=[
             Optional(),
             Length(max=150),
@@ -41,12 +40,11 @@ class EditScenarioForm(FlaskForm):
 
 class ScenarioStepForm(FlaskForm):
     """Form for adding or editing a single scenario step."""
-    # We might set sequence_order automatically or allow editing later
     sequence_order = IntegerField(
         'Sequence Order',
         validators=[DataRequired(), NumberRange(min=1)],
         description="Order in which this step runs (e.g., 1, 2, 3...)."
-        # Render as readonly or hidden if setting automatically on create?
+        
     )
     action_type = SelectField(
         'Action Type',
@@ -67,9 +65,8 @@ class ScenarioStepForm(FlaskForm):
     )
     submit = SubmitField('Save Step')
 
-    # Add custom validation later if needed, e.g., require value for certain action types
 
-    
+
 class ColumnMappingForm(FlaskForm):
     """Form for adding a column mapping."""
     scraped_header = StringField(
@@ -79,7 +76,7 @@ class ColumnMappingForm(FlaskForm):
     )
     template_header = SelectField(
         'Template Header Name',
-        choices=[], # Initialize with empty choices, will be populated in the route
+        choices=[], 
         validators=[DataRequired(message="Please select a template header.")],
         description="Select the header from your uploaded Excel template."
     )
@@ -115,6 +112,7 @@ class ProcessingRuleForm(FlaskForm):
     )
     submit = SubmitField('Add Rule')
 
+
 class CreateScenarioForm(FlaskForm):
     """Form for initial scenario creation including template upload."""
     name = StringField(
@@ -128,22 +126,22 @@ class CreateScenarioForm(FlaskForm):
         description="The starting URL of the web application you want to monitor."
     )
     template_file = FileField(
-        'Upload Report Template (.xlsx)',
+        'Upload Report Template ',
         validators=[
-            FileRequired(message="An Excel report template is required."), # Make it required
+            FileRequired(message="An Excel report template is required."), 
             FileAllowed(['xlsx'], 'Excel files (.xlsx) only!')
         ],
         description="The .xlsx template file that will be populated with data."
     )
     schedule_cron = StringField(
-        'Initial Schedule (Cron Format)',
+        ' Schedule ',
         validators=[DataRequired()],
         default='0 8 * * *', # Example: Daily at 8 AM
         description="E.g., '0 8 * * *' for daily at 8 AM. You can refine this later."
     )
     submit = SubmitField('Save & Proceed to Record Steps')
     custom_report_base_name = StringField(
-        'Custom Report Base Name (Optional)',
+        'Custom Report Base Name ',
         validators=[
             Optional(),
             Length(max=150),
