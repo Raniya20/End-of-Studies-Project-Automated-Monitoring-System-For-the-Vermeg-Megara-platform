@@ -38,7 +38,7 @@ Key components include:
 ---
 
 ## 📊 Screenshots 
-![Sign In Screenshot](sign-in.png)
+![Sign In Screenshot](Sign-In.png)
 
 
 
