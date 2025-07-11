@@ -37,22 +37,12 @@ Key components include:
 
 ---
 
-## 📊 Screenshots 
-![Sign In Screenshot](Sign-In.png)
-
-
-
----
-
 ## 🚀 How It Works
 
 1. RPA script logs into MEGARA and extracts operational data
 2. Data is processed and fed to the ML model
 3. Anomalies are flagged and displayed in a live dashboard
 4. Critical issues trigger email alerts to consultants
-
----
-
 
 ---
 
