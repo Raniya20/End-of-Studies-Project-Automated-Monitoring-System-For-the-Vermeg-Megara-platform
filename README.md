@@ -29,17 +29,16 @@ Key components include:
 
 - **Language**: Python  
 - **Frameworks & Libraries**: Flask, Pandas, Scikit-learn, XGBoost  
-- **Automation**: Selenium (for RPA)  
+- **Automation**: Playwright (for RPA)  
 - **Database**: PostgreSQL  
 - **Frontend**: HTML, CSS, JavaScript  
-- **Visualization**: Plotly, Dash, or Power BI (if applicable)  
+- **Visualization**:  Chart.js
 - **Version Control**: Git, GitHub
 
 ---
 
-## 📊 Screenshots (optional)
+## 📊 Screenshots 
 
-_Add screenshots or gifs here to show the dashboard, alert system, or sample output._
 
 ---
 
